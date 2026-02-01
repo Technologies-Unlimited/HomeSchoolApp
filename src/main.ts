@@ -1,5 +1,7 @@
 // API helper
-const API_URL = 'http://localhost:3000';
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : window.location.origin;
 let authToken: string | null = localStorage.getItem('authToken');
 let currentUser: any = null;
 
