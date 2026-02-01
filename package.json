@@ -7,7 +7,7 @@
     "db:setup": "bun run src/db/setup.ts",
     "db:seed": "bun run src/db/seed.ts",
     "notifications:process": "bun run src/scripts/process-notifications.ts",
-    "build": "bun build src/main.ts --outdir=dist --target=browser --minify",
+    "build": "bun build src/main.ts --outdir=dist --target=browser --minify && bun run scripts/copy-index.ts",
     "preview": "bun run server.ts"
   },
   "dependencies": {
