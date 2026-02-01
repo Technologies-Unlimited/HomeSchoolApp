@@ -6,8 +6,9 @@ import { isAdmin } from "@/lib/roles";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user || !isAdmin(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,7 +22,7 @@ export async function PATCH(
 
   const db = await getDb();
   await db.collection("users").updateOne(
-    { _id: new ObjectId(params.id) },
+    { _id: new ObjectId(id) },
     { $set: { role, updatedAt: new Date() } }
   );
 

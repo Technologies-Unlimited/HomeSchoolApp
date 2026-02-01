@@ -6,11 +6,12 @@ import { eventSchema } from "@/lib/validation";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const db = await getDb();
   const event = await db.collection("events").findOne({
-    _id: new ObjectId(params.id),
+    _id: new ObjectId(id),
   });
 
   if (!event) {
@@ -22,8 +23,9 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,12 +46,12 @@ export async function PATCH(
   };
 
   await db.collection("events").updateOne(
-    { _id: new ObjectId(params.id) },
+    { _id: new ObjectId(id) },
     { $set: update }
   );
 
   const event = await db.collection("events").findOne({
-    _id: new ObjectId(params.id),
+    _id: new ObjectId(id),
   });
 
   return NextResponse.json({ event: { ...event, id: event?._id.toString() } });
@@ -57,8 +59,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -66,7 +69,7 @@ export async function DELETE(
 
   const db = await getDb();
   await db.collection("events").updateOne(
-    { _id: new ObjectId(params.id) },
+    { _id: new ObjectId(id) },
     { $set: { status: "cancelled", updatedAt: new Date() } }
   );
 

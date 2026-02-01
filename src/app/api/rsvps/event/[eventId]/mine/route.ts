@@ -5,8 +5,9 @@ import { getUserFromRequest } from "@/lib/session";
 
 export async function GET(
   request: Request,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const { eventId } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,7 +15,7 @@ export async function GET(
 
   const db = await getDb();
   const rsvp = await db.collection("rsvps").findOne({
-    eventId: new ObjectId(params.eventId),
+    eventId: new ObjectId(eventId),
     userId: new ObjectId(user._id),
   });
 

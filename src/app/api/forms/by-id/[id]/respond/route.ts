@@ -5,8 +5,9 @@ import { getUserFromRequest } from "@/lib/session";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +20,7 @@ export async function POST(
 
   const db = await getDb();
   const form = await db.collection("forms").findOne({
-    _id: new ObjectId(params.id),
+    _id: new ObjectId(id),
   });
 
   if (!form) {
@@ -27,7 +28,7 @@ export async function POST(
   }
 
   const response = {
-    formId: new ObjectId(params.id),
+    formId: new ObjectId(id),
     eventId: form.eventId,
     userId: new ObjectId(user._id),
     responses: body.responses,

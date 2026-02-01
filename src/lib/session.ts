@@ -3,7 +3,19 @@ import { ObjectId } from "mongodb";
 import { getDb } from "./db";
 import { getTokenFromRequest, verifyToken } from "./auth";
 
-export async function getUserFromRequest(request: NextRequest) {
+export interface SessionUser {
+  id: string;
+  _id: ObjectId;
+  role?: string;
+  email?: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export async function getUserFromRequest(
+  request: NextRequest
+): Promise<SessionUser | null> {
   const token = getTokenFromRequest(request);
   if (!token) return null;
 
@@ -14,7 +26,7 @@ export async function getUserFromRequest(request: NextRequest) {
       _id: new ObjectId(payload.userId),
     });
     if (!user) return null;
-    return { ...user, id: user._id.toString() };
+    return { ...(user as SessionUser), id: user._id.toString() };
   } catch {
     return null;
   }

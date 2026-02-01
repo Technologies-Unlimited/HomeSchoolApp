@@ -6,8 +6,9 @@ import { isAdmin } from "@/lib/roles";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user || !isAdmin(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,7 +16,7 @@ export async function POST(
 
   const db = await getDb();
   await db.collection("events").updateOne(
-    { _id: new ObjectId(params.id) },
+    { _id: new ObjectId(id) },
     {
       $set: {
         status: "published",

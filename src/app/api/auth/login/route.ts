@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const token = signToken({ userId: user._id.toString(), role: user.role ?? "user" });
-    setAuthCookie(token);
+    await setAuthCookie(token);
 
     await db.collection("users").updateOne(
       { _id: user._id },

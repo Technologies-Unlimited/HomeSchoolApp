@@ -5,12 +5,13 @@ import { getUserFromRequest } from "@/lib/session";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const db = await getDb();
   const comments = await db
     .collection("comments")
-    .find({ eventId: new ObjectId(params.id), isDeleted: { $ne: true } })
+    .find({ eventId: new ObjectId(id), isDeleted: { $ne: true } })
     .sort({ createdAt: -1 })
     .toArray();
 
@@ -21,8 +22,9 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,7 +38,7 @@ export async function PATCH(
 
   const db = await getDb();
   await db.collection("comments").updateOne(
-    { _id: new ObjectId(params.id), userId: new ObjectId(user._id) },
+    { _id: new ObjectId(id), userId: new ObjectId(user._id) },
     { $set: { content, edited: true, updatedAt: new Date() } }
   );
 
@@ -45,8 +47,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -54,7 +57,7 @@ export async function DELETE(
 
   const db = await getDb();
   await db.collection("comments").updateOne(
-    { _id: new ObjectId(params.id), userId: new ObjectId(user._id) },
+    { _id: new ObjectId(id), userId: new ObjectId(user._id) },
     { $set: { isDeleted: true, updatedAt: new Date() } }
   );
 

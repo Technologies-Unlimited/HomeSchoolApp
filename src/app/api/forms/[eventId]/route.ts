@@ -4,11 +4,12 @@ import { getDb } from "@/lib/db";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const { eventId } = await params;
   const db = await getDb();
   const form = await db.collection("forms").findOne({
-    eventId: new ObjectId(params.eventId),
+    eventId: new ObjectId(eventId),
     isActive: true,
   });
 

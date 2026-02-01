@@ -1,12 +1,14 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { sign, verify, type Secret, type SignOptions } from "jsonwebtoken";
 import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 
-const jwtSecret = process.env.JWT_SECRET;
-
-if (!jwtSecret) {
-  throw new Error("Missing JWT_SECRET environment variable.");
+function getJwtSecret(): Secret {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error("Missing JWT_SECRET environment variable.");
+  }
+  return jwtSecret;
 }
 
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "7d";
@@ -26,15 +28,19 @@ export async function verifyPassword(password: string, hash: string) {
 }
 
 export function signToken(payload: AuthPayload) {
-  return jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
+  const options: SignOptions = {
+    expiresIn: jwtExpiresIn as SignOptions["expiresIn"],
+  };
+  return sign(payload, getJwtSecret(), options);
 }
 
 export function verifyToken(token: string): AuthPayload {
-  return jwt.verify(token, jwtSecret) as AuthPayload;
+  return verify(token, getJwtSecret()) as AuthPayload;
 }
 
-export function setAuthCookie(token: string) {
-  cookies().set(authCookieName, token, {
+export async function setAuthCookie(token: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(authCookieName, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -42,8 +48,9 @@ export function setAuthCookie(token: string) {
   });
 }
 
-export function clearAuthCookie() {
-  cookies().set(authCookieName, "", {
+export async function clearAuthCookie() {
+  const cookieStore = await cookies();
+  cookieStore.set(authCookieName, "", {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -57,8 +64,5 @@ export function getTokenFromRequest(request: NextRequest): string | null {
   if (authHeader?.startsWith("Bearer ")) {
     return authHeader.slice(7);
   }
-  const cookieToken =
-    ("cookies" in request && request.cookies.get(authCookieName)?.value) ||
-    cookies().get(authCookieName)?.value;
-  return cookieToken ?? null;
+  return request.cookies.get(authCookieName)?.value ?? null;
 }

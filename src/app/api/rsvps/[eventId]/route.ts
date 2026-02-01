@@ -4,12 +4,13 @@ import { getDb } from "@/lib/db";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const { eventId } = await params;
   const db = await getDb();
   const rsvps = await db
     .collection("rsvps")
-    .find({ eventId: new ObjectId(params.eventId) })
+    .find({ eventId: new ObjectId(eventId) })
     .toArray();
 
   return NextResponse.json({

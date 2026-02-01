@@ -1,24 +1,33 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
-const smtpHost = process.env.MAILGUN_SMTP_HOST;
-const smtpPort = Number(process.env.MAILGUN_SMTP_PORT ?? "587");
-const smtpUser = process.env.MAILGUN_SMTP_USER;
-const smtpPass = process.env.MAILGUN_SMTP_PASS;
-const fromEmail = process.env.FROM_EMAIL;
+let cachedTransporter: Transporter | null = null;
 
-if (!smtpHost || !smtpUser || !smtpPass || !fromEmail) {
-  throw new Error("Missing Mailgun SMTP environment variables.");
+function getTransporter() {
+  if (cachedTransporter) {
+    return cachedTransporter;
+  }
+
+  const smtpHost = process.env.MAILGUN_SMTP_HOST;
+  const smtpPort = Number(process.env.MAILGUN_SMTP_PORT ?? "587");
+  const smtpUser = process.env.MAILGUN_SMTP_USER;
+  const smtpPass = process.env.MAILGUN_SMTP_PASS;
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    throw new Error("Missing Mailgun SMTP environment variables.");
+  }
+
+  cachedTransporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: false,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  });
+
+  return cachedTransporter;
 }
-
-const transporter = nodemailer.createTransport({
-  host: smtpHost,
-  port: smtpPort,
-  secure: false,
-  auth: {
-    user: smtpUser,
-    pass: smtpPass,
-  },
-});
 
 export async function sendNotificationEmail({
   to,
@@ -29,6 +38,12 @@ export async function sendNotificationEmail({
   subject: string;
   html: string;
 }) {
+  const fromEmail = process.env.FROM_EMAIL;
+  if (!fromEmail) {
+    throw new Error("Missing FROM_EMAIL environment variable.");
+  }
+
+  const transporter = getTransporter();
   await transporter.sendMail({
     from: fromEmail,
     to,

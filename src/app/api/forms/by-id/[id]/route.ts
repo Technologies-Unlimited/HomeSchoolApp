@@ -5,8 +5,9 @@ import { getUserFromRequest } from "@/lib/session";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,7 +21,7 @@ export async function PATCH(
 
   const db = await getDb();
   await db.collection("forms").updateOne(
-    { _id: new ObjectId(params.id) },
+    { _id: new ObjectId(id) },
     { $set: { ...update, updatedAt: new Date() } }
   );
 
@@ -29,15 +30,16 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getUserFromRequest(request as any);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const db = await getDb();
-  await db.collection("forms").deleteOne({ _id: new ObjectId(params.id) });
+  await db.collection("forms").deleteOne({ _id: new ObjectId(id) });
 
   return NextResponse.json({ success: true });
 }
