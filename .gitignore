@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.bun/
+
+# Build output
+dist/
+.vercel/
+
+# Logs
+*.log
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

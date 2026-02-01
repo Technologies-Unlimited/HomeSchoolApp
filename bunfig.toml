@@ -1,0 +1,13 @@
+# Bun configuration file
+
+[install]
+# Auto install dependencies
+auto = "fallback"
+
+[test]
+# Test configuration
+preload = []
+
+[run]
+# Enable hot reload by default
+hot = true
