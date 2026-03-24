@@ -34,6 +34,21 @@ async function ensureIndexes() {
   await db.collection("comments").createIndex({ eventId: 1, createdAt: -1 });
   console.log("  comments.{eventId, createdAt}");
 
+  await db.collection("families").createIndex({ userId: 1 }, { unique: true });
+  console.log("  families.userId (unique)");
+
+  await db.collection("announcements").createIndex({ isDeleted: 1, pinned: -1, createdAt: -1 });
+  console.log("  announcements.{isDeleted, pinned, createdAt}");
+
+  await db.collection("volunteerSlots").createIndex({ eventId: 1 });
+  console.log("  volunteerSlots.eventId");
+
+  await db.collection("carpools").createIndex({ eventId: 1 });
+  console.log("  carpools.eventId");
+
+  await db.collection("locations").createIndex({ name: 1 });
+  console.log("  locations.name");
+
   console.log("Done!");
   await client.close();
 }
