@@ -29,6 +29,9 @@ export async function GET(request: Request) {
       lastName: item.lastName,
       role: item.role ?? "user",
       isActive: item.isActive ?? true,
+      emailVerified: item.emailVerified ?? false,
+      approved: item.approved ?? false,
+      createdAt: item.createdAt,
     })),
   });
 }
