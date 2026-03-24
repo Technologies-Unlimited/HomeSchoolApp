@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "./db";
 import { getTokenFromRequest, verifyToken } from "./auth";
@@ -14,20 +13,31 @@ export interface SessionUser {
 }
 
 export async function getUserFromRequest(
-  request: NextRequest
+  request: Request
 ): Promise<SessionUser | null> {
   const token = getTokenFromRequest(request);
-  if (!token) return null;
+  if (!token) {
+    console.log("[SESSION] No token found in request");
+    return null;
+  }
+  console.log("[SESSION] Token found, verifying...");
 
   try {
     const payload = verifyToken(token);
+    console.log("[SESSION] Token verified — userId:", payload.userId, "role:", payload.role);
+
     const db = await getDb();
     const user = await db.collection("users").findOne({
       _id: new ObjectId(payload.userId),
     });
-    if (!user) return null;
+    if (!user) {
+      console.warn("[SESSION] Token valid but user not found in database — userId:", payload.userId);
+      return null;
+    }
+    console.log("[SESSION] User loaded from database — id:", user._id.toString(), "email:", user.email);
     return { ...(user as SessionUser), id: user._id.toString() };
-  } catch {
+  } catch (error) {
+    console.error("[SESSION] Token verification failed:", error);
     return null;
   }
 }

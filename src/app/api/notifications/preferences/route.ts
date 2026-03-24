@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "@/lib/notification-defaults";
 
 export async function GET(request: Request) {
-  const user = await getUserFromRequest(request as any);
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -15,19 +16,12 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json({
-    preferences: prefs ?? {
-      emailEnabled: true,
-      reminder1Day: true,
-      reminder1Week: true,
-      reminder2Weeks: false,
-      reminder1Month: false,
-      reminderCustomDays: null,
-    },
+    preferences: prefs ?? DEFAULT_NOTIFICATION_PREFERENCES,
   });
 }
 
 export async function PUT(request: Request) {
-  const user = await getUserFromRequest(request as any);
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -40,8 +34,10 @@ export async function PUT(request: Request) {
     reminder2Weeks: Boolean(body?.reminder2Weeks),
     reminder1Month: Boolean(body?.reminder1Month),
     reminderCustomDays:
-      typeof body?.reminderCustomDays === "number"
-        ? body.reminderCustomDays
+      typeof body?.reminderCustomDays === "number" &&
+      body.reminderCustomDays >= 1 &&
+      body.reminderCustomDays <= 365
+        ? Math.floor(body.reminderCustomDays)
         : null,
   };
 

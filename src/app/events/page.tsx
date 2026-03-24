@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 interface EventItem {
   id: string;
@@ -29,18 +30,27 @@ export default function EventsPage() {
 
   return (
     <section className="flex flex-col gap-6">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Events" }]} />
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
             Events
           </h1>
           {user && (
-            <Link
-              href="/events/new"
-              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-            >
-              Create event
-            </Link>
+            <div className="flex gap-2">
+              <Link
+                href="/events/drafts"
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                My drafts
+              </Link>
+              <Link
+                href="/events/new"
+                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Create event
+              </Link>
+            </div>
           )}
         </div>
         <p className="text-sm text-slate-600">
@@ -55,19 +65,15 @@ export default function EventsPage() {
           <p className="text-sm text-slate-500">No published events yet.</p>
         ) : (
           events.map((event) => (
-            <article
+            <Link
               key={event.id}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+              href={`/events/${event.id}`}
+              className="block rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-2">
                   <h2 className="text-lg font-semibold text-slate-900">
-                    <Link
-                      href={`/events/${event.id}`}
-                      className="transition hover:text-slate-700"
-                    >
                       {event.title}
-                    </Link>
                   </h2>
                   <p className="text-sm text-slate-600">
                     {event.startDate
@@ -80,7 +86,7 @@ export default function EventsPage() {
                   {event.status ?? "published"}
                 </span>
               </div>
-            </article>
+            </Link>
           ))
         )}
       </div>

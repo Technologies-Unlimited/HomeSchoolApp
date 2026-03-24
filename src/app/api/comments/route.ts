@@ -5,7 +5,7 @@ import { getUserFromRequest } from "@/lib/session";
 import { commentSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const user = await getUserFromRequest(request as any);
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

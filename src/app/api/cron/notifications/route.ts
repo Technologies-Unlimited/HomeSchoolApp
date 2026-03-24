@@ -3,6 +3,16 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { sendNotificationEmail } from "@/lib/notifications";
 
+function verifyCronSecret(request: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("[CRON] CRON_SECRET environment variable is not set — blocking request");
+    return false;
+  }
+  const authHeader = request.headers.get("authorization");
+  return authHeader === `Bearer ${cronSecret}`;
+}
+
 async function processQueue() {
   const db = await getDb();
   const now = new Date();
@@ -32,12 +42,28 @@ async function processQueue() {
         continue;
       }
 
+      const eventDate = new Date(event.startDate).toLocaleString();
+      const locationText = event.location?.name
+        ? `<p style="margin:0 0 8px;color:#64748b;font-size:14px;">Location: ${event.location.name}${event.location.address ? ` — ${event.location.address}` : ""}</p>`
+        : "";
+
       await sendNotificationEmail({
         to: user.email,
-        subject: `Reminder: ${event.title}`,
-        html: `<p>Reminder for <strong>${event.title}</strong> on ${new Date(
-          event.startDate
-        ).toLocaleString()}.</p>`,
+        subject: `Reminder: ${event.title} — ${eventDate}`,
+        html: `
+          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
+            <h2 style="margin:0 0 16px;color:#0f172a;font-size:20px;">Upcoming Event Reminder</h2>
+            <div style="padding:20px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+              <h3 style="margin:0 0 8px;color:#0f172a;font-size:18px;">${event.title}</h3>
+              <p style="margin:0 0 8px;color:#64748b;font-size:14px;">When: ${eventDate}</p>
+              ${locationText}
+              ${event.description ? `<p style="margin:12px 0 0;color:#475569;font-size:14px;">${event.description}</p>` : ""}
+            </div>
+            <p style="margin:24px 0 0;color:#94a3b8;font-size:12px;">
+              You're receiving this because you RSVP'd to this event on Home School Group.
+            </p>
+          </div>
+        `,
       });
 
       await db.collection("notificationQueue").updateOne(
@@ -57,10 +83,16 @@ async function processQueue() {
   return NextResponse.json({ processed: results.length, results });
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   return processQueue();
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   return processQueue();
 }

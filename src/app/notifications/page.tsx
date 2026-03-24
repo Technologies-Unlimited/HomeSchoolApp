@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 interface NotificationItem {
   id: string;
@@ -24,6 +25,7 @@ export default function NotificationsPage() {
 
   return (
     <section className="flex flex-col gap-6">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Notifications" }]} />
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Notifications

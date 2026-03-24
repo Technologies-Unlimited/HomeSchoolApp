@@ -3,9 +3,10 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
 import { rsvpSchema } from "@/lib/validation";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "@/lib/notification-defaults";
 
 export async function POST(request: Request) {
-  const user = await getUserFromRequest(request as any);
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -36,19 +37,20 @@ export async function POST(request: Request) {
     { upsert: true }
   );
 
+  if (parsed.data.status !== "going") {
+    await db.collection("notificationQueue").deleteMany({
+      userId,
+      eventId,
+      sent: false,
+    });
+  }
+
   if (parsed.data.status === "going") {
     const event = await db.collection("events").findOne({ _id: eventId });
     const prefs =
       (await db
         .collection("notificationPreferences")
-        .findOne({ userId })) ?? {
-        emailEnabled: true,
-        reminder1Day: true,
-        reminder1Week: true,
-        reminder2Weeks: false,
-        reminder1Month: false,
-        reminderCustomDays: null,
-      };
+        .findOne({ userId })) ?? DEFAULT_NOTIFICATION_PREFERENCES;
 
     if (event?.startDate && prefs.emailEnabled) {
       const start = new Date(event.startDate);

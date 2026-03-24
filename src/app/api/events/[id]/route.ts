@@ -1,7 +1,9 @@
+import { isValidObjectId } from "@/lib/objectid";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
+import { isAdmin } from "@/lib/roles";
 import { eventSchema } from "@/lib/validation";
 
 export async function GET(
@@ -9,6 +11,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
   const db = await getDb();
   const event = await db.collection("events").findOne({
     _id: new ObjectId(id),
@@ -26,9 +31,21 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const user = await getUserFromRequest(request as any);
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const db = await getDb();
+  const existing = await db.collection("events").findOne({ _id: new ObjectId(id) });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (existing.creatorId?.toString() !== user._id.toString() && !isAdmin(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = await request.json();
@@ -37,7 +54,6 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid input." }, { status: 400 });
   }
 
-  const db = await getDb();
   const update = {
     ...parsed.data,
     ...(parsed.data.startDate ? { startDate: new Date(parsed.data.startDate) } : {}),
@@ -62,12 +78,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const user = await getUserFromRequest(request as any);
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const db = await getDb();
+  const existing = await db.collection("events").findOne({ _id: new ObjectId(id) });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (existing.creatorId?.toString() !== user._id.toString() && !isAdmin(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   await db.collection("events").updateOne(
     { _id: new ObjectId(id) },
     { $set: { status: "cancelled", updatedAt: new Date() } }

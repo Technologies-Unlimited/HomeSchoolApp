@@ -14,23 +14,20 @@ export function useCurrentUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/auth/me")
+    const controller = new AbortController();
+    fetch("/api/auth/me", { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!active) return;
         setUser(data?.user ?? null);
         setLoading(false);
       })
-      .catch(() => {
-        if (!active) return;
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
         setUser(null);
         setLoading(false);
       });
 
-    return () => {
-      active = false;
-    };
+    return () => controller.abort();
   }, []);
 
   return { user, loading };

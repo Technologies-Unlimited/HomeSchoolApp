@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useCurrentUser } from "@/lib/client";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -10,11 +11,14 @@ export default function NewEventPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const isAdminUser = user?.role === "admin" || user?.role === "super_admin";
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSaving(true);
     const form = new FormData(event.currentTarget);
+    const publishNow = form.get("publish") === "true";
 
     const response = await fetch("/api/events", {
       method: "POST",
@@ -28,7 +32,7 @@ export default function NewEventPage() {
           name: form.get("location"),
           address: form.get("address"),
         },
-        status: "draft",
+        status: publishNow ? "published" : "draft",
       }),
     });
 
@@ -40,7 +44,12 @@ export default function NewEventPage() {
       return;
     }
 
-    router.push("/events");
+    const data = await response.json();
+    if (publishNow) {
+      router.push(`/events/${data.event.id}`);
+    } else {
+      router.push("/events/drafts");
+    }
   }
 
   if (loading) {
@@ -62,6 +71,7 @@ export default function NewEventPage() {
 
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <Breadcrumb items={[{ label: "Events", href: "/events" }, { label: "Create event" }]} />
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Create event
@@ -126,14 +136,31 @@ export default function NewEventPage() {
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
           />
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          className="h-11 rounded-lg bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Create event"}
-        </button>
+        {error && <p className="text-sm text-red-600" role="alert" aria-live="polite">{error}</p>}
+        <input type="hidden" name="publish" value="false" />
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            className="h-11 flex-1 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save as draft"}
+          </button>
+          {isAdminUser && (
+            <button
+              type="submit"
+              onClick={(event) => {
+                const form = (event.target as HTMLButtonElement).closest("form");
+                const hidden = form?.querySelector<HTMLInputElement>("input[name=publish]");
+                if (hidden) hidden.value = "true";
+              }}
+              className="h-11 flex-1 rounded-lg bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={saving}
+            >
+              {saving ? "Publishing..." : "Publish now"}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );

@@ -1,18 +1,27 @@
+import { isValidObjectId } from "@/lib/objectid";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
+import { isAdmin } from "@/lib/roles";
+import { parsePagination } from "@/lib/pagination";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+  const { limit, skip } = parsePagination(request.url);
   const db = await getDb();
   const comments = await db
     .collection("comments")
     .find({ eventId: new ObjectId(id), isDeleted: { $ne: true } })
     .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
     .toArray();
 
   return NextResponse.json({
@@ -25,7 +34,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const user = await getUserFromRequest(request as any);
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -50,16 +62,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const user = await getUserFromRequest(request as any);
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const db = await getDb();
-  await db.collection("comments").updateOne(
-    { _id: new ObjectId(id), userId: new ObjectId(user._id) },
-    { $set: { isDeleted: true, updatedAt: new Date() } }
-  );
+  const filter = isAdmin(user.role)
+    ? { _id: new ObjectId(id) }
+    : { _id: new ObjectId(id), userId: new ObjectId(user._id) };
+
+  await db.collection("comments").updateOne(filter, {
+    $set: { isDeleted: true, deletedBy: new ObjectId(user._id), updatedAt: new Date() },
+  });
 
   return NextResponse.json({ success: true });
 }

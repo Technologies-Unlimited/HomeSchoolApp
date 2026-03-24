@@ -1,12 +1,22 @@
+import { isValidObjectId } from "@/lib/objectid";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/session";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { eventId } = await params;
+  if (!isValidObjectId(eventId)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
   const db = await getDb();
   const rsvps = await db
     .collection("rsvps")

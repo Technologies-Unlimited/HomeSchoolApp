@@ -3,13 +3,17 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
 import { eventSchema } from "@/lib/validation";
+import { parsePagination } from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { limit, skip } = parsePagination(request.url);
   const db = await getDb();
   const events = await db
     .collection("events")
     .find({ status: "published" })
     .sort({ startDate: 1 })
+    .skip(skip)
+    .limit(limit)
     .toArray();
 
   return NextResponse.json({
@@ -18,7 +22,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getUserFromRequest(request as any);
+  const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

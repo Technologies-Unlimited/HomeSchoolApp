@@ -14,6 +14,14 @@ export default function RegisterPage() {
     setLoading(true);
     const form = new FormData(event.currentTarget);
 
+    const password = form.get("password") as string;
+    const passwordConfirm = form.get("passwordConfirm") as string;
+    if (password !== passwordConfirm) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+
     const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -57,6 +65,7 @@ export default function RegisterPage() {
           <input
             type="text"
             name="firstName"
+            required
             autoComplete="given-name"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
           />
@@ -66,6 +75,7 @@ export default function RegisterPage() {
           <input
             type="text"
             name="lastName"
+            required
             autoComplete="family-name"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
           />
@@ -75,6 +85,7 @@ export default function RegisterPage() {
           <input
             type="email"
             name="email"
+            required
             autoComplete="email"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
           />
@@ -84,6 +95,10 @@ export default function RegisterPage() {
           <input
             type="tel"
             name="phone"
+            required
+            minLength={7}
+            pattern="[\d\s\+\-\(\)]{7,20}"
+            title="Enter a valid phone number (7-20 digits, may include +, -, spaces, parentheses)"
             autoComplete="tel"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
           />
@@ -93,25 +108,32 @@ export default function RegisterPage() {
           <input
             type="password"
             name="password"
+            required
+            minLength={8}
             autoComplete="new-password"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
           />
+          <span className="text-xs text-slate-500">Minimum 8 characters</span>
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
           Confirm password
           <input
             type="password"
             name="passwordConfirm"
+            required
+            minLength={8}
             autoComplete="new-password"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
           />
         </label>
         <label className="flex items-start gap-2 text-sm text-slate-600 md:col-span-2">
-          <input type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300" />
+          <input type="checkbox" required className="mt-1 h-4 w-4 rounded border-slate-300" />
           I agree to the Terms and Privacy Policy.
         </label>
         {error && (
-          <p className="text-sm text-red-600 md:col-span-2">{error}</p>
+          <p className="text-sm text-red-600 md:col-span-2" role="alert" aria-live="polite">
+            {error}
+          </p>
         )}
         <button
           type="submit"

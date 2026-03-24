@@ -2,10 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useCurrentUser } from "@/lib/client";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 export default function ProfilePage() {
   const { user, loading } = useCurrentUser();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formState, setFormState] = useState({
     firstName: "",
@@ -27,6 +29,7 @@ export default function ProfilePage() {
     if (!user) return;
     setSaving(true);
     setError(null);
+    setSuccess(false);
 
     const response = await fetch(`/api/users/${user.id}`, {
       method: "PATCH",
@@ -39,6 +42,9 @@ export default function ProfilePage() {
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       setError(data?.error ?? "Failed to update profile.");
+    } else {
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     }
   }
 
@@ -61,6 +67,7 @@ export default function ProfilePage() {
 
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Profile" }]} />
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Profile
@@ -74,11 +81,21 @@ export default function ProfilePage() {
         className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-2"
         onSubmit={handleSubmit}
       >
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 md:col-span-2">
+          Email
+          <input
+            type="email"
+            readOnly
+            className="h-11 rounded-lg border border-slate-200 bg-slate-100 px-3 text-slate-500 outline-none cursor-not-allowed"
+            value={user.email}
+          />
+        </label>
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Parent name
+          First name
           <input
             type="text"
-            name="parentName"
+            name="firstName"
+            required
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
             value={formState.firstName}
             onChange={(event) =>
@@ -87,22 +104,11 @@ export default function ProfilePage() {
           />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Phone
-          <input
-            type="tel"
-            name="phone"
-            className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
-            value={formState.phone}
-            onChange={(event) =>
-              setFormState((prev) => ({ ...prev, phone: event.target.value }))
-            }
-          />
-        </label>
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 md:col-span-2">
           Last name
           <input
             type="text"
             name="lastName"
+            required
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
             value={formState.lastName}
             onChange={(event) =>
@@ -110,8 +116,24 @@ export default function ProfilePage() {
             }
           />
         </label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 md:col-span-2">
+          Phone
+          <input
+            type="tel"
+            name="phone"
+            required
+            className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
+            value={formState.phone}
+            onChange={(event) =>
+              setFormState((prev) => ({ ...prev, phone: event.target.value }))
+            }
+          />
+        </label>
         {error && (
-          <p className="text-sm text-red-600 md:col-span-2">{error}</p>
+          <p className="text-sm text-red-600 md:col-span-2" role="alert" aria-live="polite">{error}</p>
+        )}
+        {success && (
+          <p className="text-sm text-green-600 md:col-span-2" role="status" aria-live="polite">Profile updated successfully.</p>
         )}
         <button
           type="submit"

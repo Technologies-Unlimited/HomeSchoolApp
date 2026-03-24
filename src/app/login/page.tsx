@@ -54,6 +54,7 @@ export default function LoginPage() {
           <input
             type="email"
             name="email"
+            required
             autoComplete="email"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
             placeholder="you@email.com"
@@ -64,12 +65,18 @@ export default function LoginPage() {
           <input
             type="password"
             name="password"
+            required
+            minLength={1}
             autoComplete="current-password"
             className="h-11 rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500"
             placeholder="••••••••"
           />
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-600" role="alert" aria-live="polite">
+            {error}
+          </p>
+        )}
         <button
           type="submit"
           className="h-11 w-full rounded-lg bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"

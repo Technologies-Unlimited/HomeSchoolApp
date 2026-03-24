@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import { sign, verify, type Secret, type SignOptions } from "jsonwebtoken";
-import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 
 function getJwtSecret(): Secret {
@@ -59,10 +58,13 @@ export async function clearAuthCookie() {
   });
 }
 
-export function getTokenFromRequest(request: NextRequest): string | null {
+export function getTokenFromRequest(request: Request): string | null {
   const authHeader = request.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     return authHeader.slice(7);
   }
-  return request.cookies.get(authCookieName)?.value ?? null;
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${authCookieName}=([^;]*)`));
+  return match ? match[1] : null;
 }

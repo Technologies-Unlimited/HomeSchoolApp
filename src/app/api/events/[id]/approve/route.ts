@@ -1,3 +1,4 @@
+import { isValidObjectId } from "@/lib/objectid";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
@@ -9,7 +10,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const user = await getUserFromRequest(request as any);
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+  const user = await getUserFromRequest(request);
   if (!user || !isAdmin(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
