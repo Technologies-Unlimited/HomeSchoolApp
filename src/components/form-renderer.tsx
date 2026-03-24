@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import type { FormField } from "@/lib/form-types";
 
 interface FormRendererProps {
@@ -20,7 +20,7 @@ export function FormRenderer({ formId, fields, onSubmitted, disabled }: FormRend
     setValues((prev) => ({ ...prev, [fieldId]: value }));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);

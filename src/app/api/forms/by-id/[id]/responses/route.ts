@@ -38,7 +38,21 @@ export async function GET(
     .sort({ submittedAt: -1 })
     .toArray();
 
+  // Join user names
+  const userIds = responses.map((r) => new ObjectId(r.userId)).filter(Boolean);
+  const users = userIds.length > 0
+    ? await db.collection("users").find({ _id: { $in: userIds } }, { projection: { firstName: 1, lastName: 1, email: 1 } }).toArray()
+    : [];
+  const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
   return NextResponse.json({
-    responses: responses.map((item) => ({ ...item, id: item._id.toString() })),
+    responses: responses.map((item) => {
+      const respUser = userMap.get(item.userId?.toString());
+      return {
+        ...item,
+        id: item._id.toString(),
+        userName: respUser ? [respUser.firstName, respUser.lastName].filter(Boolean).join(" ") || respUser.email : "Unknown",
+      };
+    }),
   });
 }

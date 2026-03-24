@@ -5,6 +5,7 @@ import type { FormField } from "@/lib/form-types";
 
 interface ResponseRow {
   id: string;
+  userName?: string;
   responses: Record<string, string | boolean | number>;
   submittedAt?: string;
 }
@@ -41,6 +42,7 @@ export function FormResponses({ formId, fields }: FormResponsesProps) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th className="px-3 py-2">Name</th>
             <th className="px-3 py-2">Submitted</th>
             {fields.map((field) => (
               <th key={field.id} className="px-3 py-2">
@@ -52,6 +54,9 @@ export function FormResponses({ formId, fields }: FormResponsesProps) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-slate-100">
+              <td className="px-3 py-2 font-medium text-slate-800">
+                {row.userName ?? "—"}
+              </td>
               <td className="px-3 py-2 text-slate-500">
                 {row.submittedAt
                   ? new Date(row.submittedAt).toLocaleDateString()

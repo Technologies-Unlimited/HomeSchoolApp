@@ -56,7 +56,8 @@ export async function PATCH(
     { $set: { ...update, updatedAt: new Date() } }
   );
 
-  return NextResponse.json({ success: true });
+  const updatedForm = await db.collection("forms").findOne({ _id: new ObjectId(id) });
+  return NextResponse.json({ form: updatedForm ? { ...updatedForm, id: updatedForm._id.toString() } : null });
 }
 
 export async function DELETE(
