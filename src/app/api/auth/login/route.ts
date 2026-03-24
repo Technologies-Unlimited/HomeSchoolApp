@@ -16,7 +16,8 @@ export async function POST(request: Request) {
     }
     console.log("[LOGIN] Validation passed for:", parsed.data.email);
 
-    const { email, password } = parsed.data;
+    const { password } = parsed.data;
+    const email = parsed.data.email.toLowerCase();
     const db = await getDb();
     console.log("[LOGIN] Database connection established");
 
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
         phone: user.phone,
         firstName: user.firstName,
         lastName: user.lastName,
+        emailVerified: user.emailVerified ?? false,
+        approved: user.approved ?? false,
         role: user.role ?? "user",
       },
     });

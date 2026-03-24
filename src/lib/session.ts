@@ -10,6 +10,8 @@ export interface SessionUser {
   phone?: string;
   firstName?: string;
   lastName?: string;
+  emailVerified?: boolean;
+  approved?: boolean;
 }
 
 export async function getUserFromRequest(

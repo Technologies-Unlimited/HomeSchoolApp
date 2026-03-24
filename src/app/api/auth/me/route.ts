@@ -18,6 +18,8 @@ export async function GET(request: Request) {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role ?? "user",
+      emailVerified: user.emailVerified ?? false,
+      approved: user.approved ?? false,
     },
   });
 }
