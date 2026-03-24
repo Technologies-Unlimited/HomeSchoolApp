@@ -28,6 +28,8 @@ export async function POST(request: Request) {
       $set: {
         status: parsed.data.status,
         comment: parsed.data.comment,
+        adultCount: parsed.data.adultCount ?? 1,
+        childrenNames: parsed.data.childrenNames ?? [],
         updatedAt: now,
       },
       $setOnInsert: {

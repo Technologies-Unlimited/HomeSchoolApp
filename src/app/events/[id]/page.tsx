@@ -1,12 +1,14 @@
 "use client";
 
-import { use, useEffect, useState, type FormEvent } from "react";
+import { use, useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FormBuilder } from "@/components/form-builder";
 import { FormRenderer } from "@/components/form-renderer";
 import { FormResponses } from "@/components/form-responses";
 import type { FormField, FormData } from "@/lib/form-types";
+import { VolunteerSlots } from "@/components/volunteer-slots";
+import { CarpoolBoard } from "@/components/carpool-board";
 
 interface EventDetailProps {
   params: Promise<{ id: string }>;
@@ -21,7 +23,20 @@ interface EventDetail {
   location?: { name?: string; address?: string };
   status?: string;
   creatorId?: string;
+  category?: string;
+  fee?: { amount: number; per: string; notes?: string };
+  ageRange?: { min?: number; max?: number };
+  maxAttendees?: number;
+  recurring?: { frequency: string; endAfterCount?: number };
+  attachments?: { name: string; url: string }[];
 }
+
+const categoryLabels: Record<string, string> = {
+  "field-trip": "Field Trip", "co-op": "Co-op", "park-day": "Park Day",
+  sports: "Sports", social: "Social", "science-fair": "Science Fair",
+  "book-club": "Book Club", "arts-crafts": "Arts & Crafts",
+  volunteer: "Volunteer", meeting: "Meeting", other: "Other",
+};
 
 interface CommentItem {
   id: string;
@@ -113,7 +128,7 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
       .catch(() => setAttendeesLoaded(true));
   }, [canManage, attendeesLoaded, event, params.id]);
 
-  async function handleEditSubmit(submitEvent: FormEvent<HTMLFormElement>) {
+  async function handleEditSubmit(submitEvent: React.FormEvent<HTMLFormElement>) {
     submitEvent.preventDefault();
     setEditSaving(true);
     setError(null);
@@ -151,7 +166,7 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
     setAttendeesLoaded(false);
   }
 
-  async function handleComment(eventSubmit: FormEvent<HTMLFormElement>) {
+  async function handleComment(eventSubmit: React.FormEvent<HTMLFormElement>) {
     eventSubmit.preventDefault();
     setError(null);
     const formElement = eventSubmit.currentTarget;
@@ -233,10 +248,53 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
           {event.location?.name ? ` \u2022 ${event.location.name}` : ""}
         </p>
         {event.description && <p className="text-sm text-slate-600">{event.description}</p>}
-        {event.status && event.status !== "published" && (
-          <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-            {event.status}
-          </span>
+        <div className="flex flex-wrap gap-2">
+          {event.status && event.status !== "published" && (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+              {event.status}
+            </span>
+          )}
+          {event.category && (
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+              {categoryLabels[event.category] ?? event.category}
+            </span>
+          )}
+          {event.recurring && (
+            <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
+              Recurring ({event.recurring.frequency})
+            </span>
+          )}
+          {event.fee && event.fee.amount > 0 && (
+            <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+              ${event.fee.amount} / {event.fee.per}
+              {event.fee.notes ? ` — ${event.fee.notes}` : ""}
+            </span>
+          )}
+          {event.ageRange && (event.ageRange.min !== undefined || event.ageRange.max !== undefined) && (
+            <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+              Ages {event.ageRange.min ?? 0}–{event.ageRange.max ?? "18+"}
+            </span>
+          )}
+          {event.maxAttendees && (
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              Max {event.maxAttendees}
+            </span>
+          )}
+        </div>
+        {event.attachments && event.attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {event.attachments.map((attachment, index) => (
+              <a
+                key={index}
+                href={attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                📎 {attachment.name}
+              </a>
+            ))}
+          </div>
         )}
       </div>
 
@@ -487,6 +545,18 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
             </div>
           </div>
         )}
+      </div>
+
+      {/* Volunteer slots + Carpool */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-slate-900">Volunteer sign-ups</h2>
+          <VolunteerSlots eventId={params.id} canManage={!!canManage} />
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-slate-900">Carpools</h2>
+          <CarpoolBoard eventId={params.id} />
+        </div>
       </div>
 
       {/* Discussion — full width */}
