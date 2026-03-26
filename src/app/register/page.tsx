@@ -1,9 +1,17 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Loading...</p>}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteEmail = searchParams.get("invite") ?? "";
