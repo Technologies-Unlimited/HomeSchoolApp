@@ -18,7 +18,7 @@ const authNavItems = [
 ];
 
 export function SiteHeader() {
-  const { user, loading } = useCurrentUser();
+  const { user, loading, refresh } = useCurrentUser();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -33,9 +33,9 @@ export function SiteHeader() {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
+    refresh();
     setMobileOpen(false);
     router.push("/login");
-    router.refresh();
   }
 
   return (

@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { useCurrentUser } from "@/lib/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refresh } = useCurrentUser();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +34,7 @@ export default function LoginPage() {
       return;
     }
 
+    refresh();
     router.push("/");
   }
 
