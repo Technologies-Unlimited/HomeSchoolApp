@@ -93,6 +93,25 @@ const PAGE_GUIDES: Record<string, { headline: string; summary: string; details: 
       "The personal message field lets you add a warm note that appears in the invite email — great for making new families feel welcome. You can resend any invite if the recipient missed it.",
     ],
   },
+  admin_activity: {
+    headline: "Activity log",
+    summary: "Track every action across the app — member approvals, role changes, event lifecycle, and announcement management. Revert changes if something was done in error.",
+    details: [
+      "Member actions are tracked: approvals, denials, role changes, deactivations, and reactivations — so you always know who granted or revoked access.",
+      "Event actions are tracked: creation, edits, approvals, and cancellations — giving you a full timeline of every event from draft to published or cancelled.",
+      "Announcement actions are tracked: creation, edits, and deletions — so you can see who posted what and restore deleted announcements if needed.",
+      "Actions that changed data include a snapshot of the previous state. You can revert these with one click to restore the original values.",
+      "Filter by action type to quickly find specific changes, and paginate through the full history.",
+    ],
+  },
+  my_events: {
+    headline: "Your personal schedule",
+    summary: "See all events you've RSVP'd to plus events you've created, all in one place.",
+    details: [
+      "Events you're attending shows everything you've RSVP'd going, maybe, or waitlisted to — so you can quickly see your upcoming commitments.",
+      "Events you created shows your drafts, pending submissions, and published events so you can track their status.",
+    ],
+  },
 };
 
 export function PageGuide({ pageKey, children }: { pageKey: string; children: React.ReactNode }) {

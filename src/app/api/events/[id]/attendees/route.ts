@@ -37,6 +37,8 @@ export async function GET(
     return {
       id: rsvp._id.toString(),
       status: rsvp.status,
+      adultCount: rsvp.adultCount ?? 1,
+      childrenNames: rsvp.childrenNames ?? [],
       name: userDoc
         ? `${userDoc.firstName ?? ""} ${userDoc.lastName ?? ""}`.trim() || userDoc.email
         : "Unknown",

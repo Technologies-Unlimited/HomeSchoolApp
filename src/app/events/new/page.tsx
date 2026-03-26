@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { EVENT_CATEGORIES } from "@/lib/validation";
@@ -22,7 +22,17 @@ const categoryLabels: Record<string, string> = {
 };
 
 export default function NewEventPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Loading...</p>}>
+      <NewEventForm />
+    </Suspense>
+  );
+}
+
+function NewEventForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const duplicateId = searchParams.get("duplicate");
   const { user, loading } = useCurrentUser();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -31,6 +41,40 @@ export default function NewEventPage() {
   const [location, setLocation] = useState({ name: "", address: "" });
 
   const isAdminUser = user?.role === "admin" || user?.role === "super_admin";
+
+  // Pre-fill from duplicated event
+  useEffect(() => {
+    if (!duplicateId || !user) return;
+    fetch(`/api/events/${duplicateId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d?.event) return;
+        const event = d.event;
+        // Pre-fill the form fields via DOM (the form uses uncontrolled inputs)
+        const form = document.querySelector("form");
+        if (!form) return;
+        const setValue = (name: string, value: string) => {
+          const input = form.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+          if (input) {
+            input.value = value;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        };
+        setValue("title", event.title ?? "");
+        setValue("description", event.description ?? "");
+        setValue("category", event.category ?? "other");
+        if (event.fee?.amount) setValue("feeAmount", String(event.fee.amount));
+        if (event.fee?.per) setValue("feePer", event.fee.per);
+        if (event.fee?.notes) setValue("feeNotes", event.fee.notes);
+        if (event.ageRange?.min) setValue("ageMin", String(event.ageRange.min));
+        if (event.ageRange?.max) setValue("ageMax", String(event.ageRange.max));
+        if (event.maxAttendees) setValue("maxAttendees", String(event.maxAttendees));
+        if (event.location) setLocation({ name: event.location.name ?? "", address: event.location.address ?? "" });
+        if (event.attachments?.length) setAttachments(event.attachments);
+        if (event.fee || event.ageRange || event.maxAttendees || event.attachments?.length) setShowAdvanced(true);
+      })
+      .catch(() => {});
+  }, [duplicateId, user]);
 
   function addAttachment() {
     setAttachments((prev) => [...prev, { name: "", url: "" }]);

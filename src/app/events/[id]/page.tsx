@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FormBuilder } from "@/components/form-builder";
@@ -50,10 +51,13 @@ interface AttendeeItem {
   id: string;
   name: string;
   status: string;
+  adultCount?: number;
+  childrenNames?: string[];
 }
 
 export default function EventDetailPage({ params: paramsPromise }: EventDetailProps) {
   const params = use(paramsPromise);
+  const router = useRouter();
   const { user } = useCurrentUser();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -310,12 +314,20 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-slate-900">Edit event</h3>
               <p className="mt-1 text-xs text-slate-500">Update title, dates, location, and description.</p>
-              <button
-                onClick={() => setEditing(true)}
-                className="mt-3 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-              >
-                Edit details
-              </button>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setEditing(true)}
+                  className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Edit details
+                </button>
+                <button
+                  onClick={() => router.push(`/events/new?duplicate=${params.id}`)}
+                  className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Duplicate
+                </button>
+              </div>
             </div>
 
             {/* Card: Attendees */}
@@ -327,7 +339,7 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
               <p className="mt-1 text-xs text-slate-500">
                 {showAttendees ? "Click to collapse" : "Click to view who's coming"}
               </p>
-              <div className="mt-3 flex items-baseline gap-3">
+              <div className="mt-3 flex flex-wrap items-baseline gap-3">
                 <span className="text-2xl font-bold text-slate-900">{goingCount}</span>
                 <span className="text-xs text-slate-500">going</span>
                 {attendees.length > goingCount && (
@@ -337,6 +349,16 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
                   </>
                 )}
               </div>
+              {goingCount > 0 && (() => {
+                const goingAttendees = attendees.filter((a) => a.status === "going");
+                const totalAdults = goingAttendees.reduce((sum, a) => sum + (a.adultCount ?? 1), 0);
+                const totalChildren = goingAttendees.reduce((sum, a) => sum + (a.childrenNames?.length ?? 0), 0);
+                return (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {totalAdults} {totalAdults === 1 ? "adult" : "adults"}{totalChildren > 0 ? `, ${totalChildren} ${totalChildren === 1 ? "child" : "children"}` : ""}
+                  </p>
+                );
+              })()}
             </button>
 
             {/* Card: Sign-up form management */}
@@ -519,6 +541,9 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
               </button>
             ))}
           </div>
+          {rsvpStatus === "waitlisted" && (
+            <p className="mt-3 text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2">You're on the waitlist. We'll notify you by email if a spot opens up.</p>
+          )}
           {!user && (
             <p className="mt-3 text-xs text-slate-500">Sign in to RSVP for this event.</p>
           )}

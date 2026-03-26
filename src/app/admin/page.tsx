@@ -16,7 +16,7 @@ const priorityStyles: Record<string, string> = { normal: "bg-slate-100 text-slat
 
 export default function AdminPage() {
   const { user, loading } = useCurrentUser();
-  const [tab, setTab] = useState<"overview" | "users" | "announcements" | "invites">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "announcements" | "invites" | "activity">("overview");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -30,12 +30,21 @@ export default function AdminPage() {
   // Users state
   const [users, setUsers] = useState<UserItem[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
+  const [userStatusFilter, setUserStatusFilter] = useState("all");
 
   // Announcements state
   const [announcements, setAnnouncements] = useState<{ id: string; title: string; priority: string; visibility?: string; pinned: boolean; publishAt?: string; createdAt: string }[]>([]);
-  const [announcementForm, setAnnouncementForm] = useState({ title: "", content: "", priority: "normal" as string, visibility: "members" as string, pinned: false, publishAt: "" });
+  const [announcementForm, setAnnouncementForm] = useState({ title: "", content: "", priority: "normal" as string, visibility: "members" as string, pinned: false, publishAt: "", emailToMembers: false });
   const [announcementSaving, setAnnouncementSaving] = useState(false);
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+
+  // Activity state
+  const [auditEntries, setAuditEntries] = useState<{ id: string; action: string; actorName: string; targetType: string; targetId: string; details: string; hasRevertData: boolean; createdAt: string }[]>([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditFilter, setAuditFilter] = useState("all");
 
   // Invites state
   const [invites, setInvites] = useState<{ id: string; email: string; role: string; status: string; invitedByName: string; createdAt: string }[]>([]);
@@ -102,6 +111,23 @@ export default function AdminPage() {
   useEffect(() => { if (tab === "announcements") loadAnnouncements(); }, [tab]);
   useEffect(() => { if (tab === "invites") loadInvites(); }, [tab]);
 
+  function loadAuditLog(page = 1, filter = "all") {
+    const params = new URLSearchParams({ limit: "20", page: String(page) });
+    if (filter !== "all") params.set("action", filter);
+    fetch(`/api/admin/audit?${params}`).then((r) => r.ok ? r.json() : { entries: [], total: 0 }).then((d) => { setAuditEntries(d?.entries ?? []); setAuditTotal(d?.total ?? 0); }).catch(() => {});
+  }
+
+  async function handleRevertAudit(entryId: string) {
+    if (!confirm("Revert this action? The previous state will be restored.")) return;
+    setActionLoading(entryId); setError(null);
+    const r = await fetch("/api/admin/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entryId }) });
+    setActionLoading(null);
+    if (r.ok) { showMsg("Action reverted."); loadAuditLog(auditPage, auditFilter); }
+    else { const d = await r.json().catch(() => ({})); setError(d.error || "Failed to revert."); }
+  }
+
+  useEffect(() => { if (tab === "activity") loadAuditLog(auditPage, auditFilter); }, [tab, auditPage, auditFilter]);
+
   // Event actions
   async function handleApproveEvent(eventId: string) {
     setActionLoading(eventId);
@@ -140,6 +166,16 @@ export default function AdminPage() {
     if (r.ok) { setUsers((p) => p.map((u) => u.id === userId ? { ...u, role: newRole } : u)); showMsg("Role updated."); } else setError("Failed.");
   }
 
+  // Member deactivation
+  async function handleToggleActive(userId: string, currentlyActive: boolean) {
+    if (!confirm(currentlyActive ? "Deactivate this member? They will lose access." : "Reactivate this member?")) return;
+    setActionLoading(userId);
+    const r = await fetch(`/api/admin/users/${userId}/status`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !currentlyActive }) });
+    setActionLoading(null);
+    if (r.ok) { setUsers((p) => p.map((u) => u.id === userId ? { ...u, isActive: !currentlyActive } : u)); showMsg(currentlyActive ? "Member deactivated." : "Member reactivated."); }
+    else setError("Failed to update status.");
+  }
+
   // Notes
   async function handleSaveNotes() {
     setNotesSaving(true);
@@ -159,7 +195,7 @@ export default function AdminPage() {
     }) });
     setAnnouncementSaving(false);
     if (r.ok) {
-      setAnnouncementForm({ title: "", content: "", priority: "normal", visibility: "members", pinned: false, publishAt: "" });
+      setAnnouncementForm({ title: "", content: "", priority: "normal", visibility: "members", pinned: false, publishAt: "", emailToMembers: false });
       setEditingAnnouncementId(null);
       showMsg(editingAnnouncementId ? "Updated." : "Published.");
       loadAnnouncements();
@@ -182,7 +218,7 @@ export default function AdminPage() {
 
       {/* Tabs — guides are inside each tab */}
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-        {(["overview", "users", "announcements", "invites"] as const).map((tabName) => (
+        {(["overview", "users", "announcements", "invites", "activity"] as const).map((tabName) => (
           <button key={tabName} onClick={() => setTab(tabName)} data-active={tab === tabName} className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold capitalize transition ${tab === tabName ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
             {tabName}
           </button>
@@ -245,13 +281,34 @@ export default function AdminPage() {
           <PageGuide pageKey="admin_users">
             <h2 className="text-lg font-semibold text-slate-900">Users</h2>
           </PageGuide>
+        <div className="flex flex-wrap items-center gap-3">
+          <input type="text" placeholder="Search by name or email..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="h-9 flex-1 min-w-[200px] rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+          <select value={userRoleFilter} onChange={(e) => setUserRoleFilter(e.target.value)} className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-700 outline-none" aria-label="Filter by role">
+            <option value="all">All roles</option>
+            {VALID_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select value={userStatusFilter} onChange={(e) => setUserStatusFilter(e.target.value)} className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-700 outline-none" aria-label="Filter by status">
+            <option value="all">All statuses</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+            <option value="deactivated">Deactivated</option>
+          </select>
+        </div>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead><tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              <th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th>
             </tr></thead>
             <tbody>
-              {users.map((userItem) => (
+              {users.filter((userItem) => {
+                const searchLower = userSearch.toLowerCase();
+                if (searchLower && !`${userItem.firstName} ${userItem.lastName} ${userItem.email}`.toLowerCase().includes(searchLower)) return false;
+                if (userRoleFilter !== "all" && userItem.role !== userRoleFilter) return false;
+                if (userStatusFilter === "approved" && !userItem.approved) return false;
+                if (userStatusFilter === "pending" && userItem.approved) return false;
+                if (userStatusFilter === "deactivated" && userItem.isActive !== false) return false;
+                return true;
+              }).map((userItem) => (
                 <tr key={userItem.id} className="border-b border-slate-100">
                   <td className="px-4 py-2 font-medium text-slate-800">{userItem.firstName} {userItem.lastName}</td>
                   <td className="px-4 py-2 text-slate-600">{userItem.email}</td>
@@ -265,6 +322,13 @@ export default function AdminPage() {
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${userItem.emailVerified ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>{userItem.emailVerified ? "Verified" : "Unverified"}</span>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${userItem.approved ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{userItem.approved ? "Approved" : "Pending"}</span>
                     </div>
+                  </td>
+                  <td className="px-4 py-2">
+                    {userItem.id !== user?.id && (
+                      <button onClick={() => handleToggleActive(userItem.id, userItem.isActive !== false)} disabled={actionLoading === userItem.id} className={`text-xs font-semibold ${userItem.isActive === false ? "text-green-600 hover:text-green-700" : "text-red-500 hover:text-red-700"} disabled:opacity-60`}>
+                        {userItem.isActive === false ? "Reactivate" : "Deactivate"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -312,6 +376,12 @@ export default function AdminPage() {
                   <input type="checkbox" checked={announcementForm.pinned} onChange={(e) => setAnnouncementForm({ ...announcementForm, pinned: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
                   Pin to top
                 </label>
+                {!editingAnnouncementId && (
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    <input type="checkbox" checked={announcementForm.emailToMembers} onChange={(e) => setAnnouncementForm({ ...announcementForm, emailToMembers: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
+                    Email to all members
+                  </label>
+                )}
                 <div>
                   <p className="mb-1 text-xs font-medium text-slate-500">Schedule (optional)</p>
                   <input type="datetime-local" value={announcementForm.publishAt} onChange={(e) => setAnnouncementForm({ ...announcementForm, publishAt: e.target.value })} className="h-9 rounded-lg border border-slate-300 px-3 text-xs text-slate-900 outline-none focus:border-slate-500" />
@@ -321,7 +391,7 @@ export default function AdminPage() {
                 <button onClick={handleSaveAnnouncement} disabled={announcementSaving} className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
                   {announcementSaving ? "Saving..." : editingAnnouncementId ? "Update" : announcementForm.publishAt ? "Schedule" : "Publish now"}
                 </button>
-                {editingAnnouncementId && <button onClick={() => { setEditingAnnouncementId(null); setAnnouncementForm({ title: "", content: "", priority: "normal", visibility: "members", pinned: false, publishAt: "" }); }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>}
+                {editingAnnouncementId && <button onClick={() => { setEditingAnnouncementId(null); setAnnouncementForm({ title: "", content: "", priority: "normal", visibility: "members", pinned: false, publishAt: "", emailToMembers: false }); }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>}
               </div>
             </div>
           </div>
@@ -338,7 +408,7 @@ export default function AdminPage() {
                   {a.publishAt && new Date(a.publishAt) > new Date() && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Scheduled</span>}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingAnnouncementId(a.id); fetch(`/api/announcements/${a.id}`).then(r => r.json()).then(d => { const ann = d.announcement; setAnnouncementForm({ title: ann.title, content: ann.content, priority: ann.priority, visibility: ann.visibility || "members", pinned: ann.pinned, publishAt: ann.publishAt ? new Date(ann.publishAt).toISOString().slice(0, 16) : "" }); }); }} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Edit</button>
+                  <button onClick={() => { setEditingAnnouncementId(a.id); fetch(`/api/announcements/${a.id}`).then(r => r.json()).then(d => { const ann = d.announcement; setAnnouncementForm({ title: ann.title, content: ann.content, priority: ann.priority, visibility: ann.visibility || "members", pinned: ann.pinned, publishAt: ann.publishAt ? new Date(ann.publishAt).toISOString().slice(0, 16) : "", emailToMembers: false }); }); }} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Edit</button>
                   <button onClick={() => handleDeleteAnnouncement(a.id)} className="text-xs font-semibold text-red-500 hover:text-red-700">Delete</button>
                 </div>
               </div>
@@ -393,6 +463,71 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ─── ACTIVITY TAB ─── */}
+      {tab === "activity" && (
+        <div className="flex flex-col gap-6">
+          <PageGuide pageKey="admin_activity">
+            <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
+          </PageGuide>
+
+          <div className="flex items-center gap-3">
+            <select value={auditFilter} onChange={(e) => { setAuditFilter(e.target.value); setAuditPage(1); }} className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-700 outline-none" aria-label="Filter by action">
+              <option value="all">All actions</option>
+              <option value="role_change">Role changes</option>
+              <option value="member_approved">Member approvals</option>
+              <option value="member_denied">Member denials</option>
+              <option value="member_deactivated">Deactivations</option>
+              <option value="member_reactivated">Reactivations</option>
+              <option value="event_created">Events created</option>
+              <option value="event_updated">Events updated</option>
+              <option value="event_approved">Events approved</option>
+              <option value="event_cancelled">Events cancelled</option>
+              <option value="announcement_created">Announcements created</option>
+              <option value="announcement_updated">Announcements updated</option>
+              <option value="announcement_deleted">Announcements deleted</option>
+              <option value="revert">Reverts</option>
+            </select>
+            <span className="text-xs text-slate-400">{auditTotal} total entries</span>
+          </div>
+
+          <div className="grid gap-2">
+            {auditEntries.length === 0 ? (
+              <p className="text-sm text-slate-500">No activity recorded yet.</p>
+            ) : auditEntries.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      entry.action === "role_change" ? "bg-purple-50 text-purple-700" :
+                      entry.action.includes("deactivated") || entry.action.includes("denied") || entry.action.includes("cancelled") || entry.action.includes("deleted") ? "bg-red-50 text-red-700" :
+                      entry.action.includes("approved") || entry.action.includes("reactivated") || entry.action.includes("created") ? "bg-green-50 text-green-700" :
+                      entry.action.includes("updated") ? "bg-blue-50 text-blue-700" :
+                      entry.action === "revert" ? "bg-amber-50 text-amber-700" :
+                      "bg-slate-100 text-slate-600"
+                    }`}>{entry.action.replace(/_/g, " ")}</span>
+                    <p className="text-sm text-slate-800 truncate">{entry.details}</p>
+                  </div>
+                  <p className="text-[11px] text-slate-400">{entry.actorName} — {new Date(entry.createdAt).toLocaleString()}</p>
+                </div>
+                {entry.hasRevertData && entry.action !== "revert" && (
+                  <button onClick={() => handleRevertAudit(entry.id)} disabled={actionLoading === entry.id} className="shrink-0 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60">
+                    {actionLoading === entry.id ? "..." : "Revert"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {auditTotal > 20 && (
+            <div className="flex justify-center gap-2">
+              <button onClick={() => setAuditPage((p) => Math.max(1, p - 1))} disabled={auditPage <= 1} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40">Previous</button>
+              <span className="flex items-center text-xs text-slate-500">Page {auditPage}</span>
+              <button onClick={() => setAuditPage((p) => p + 1)} disabled={auditEntries.length < 20} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40">Next</button>
+            </div>
+          )}
         </div>
       )}
     </section>

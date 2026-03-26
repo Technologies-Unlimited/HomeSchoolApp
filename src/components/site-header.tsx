@@ -13,6 +13,7 @@ const publicNavItems = [
 ];
 
 const authNavItems = [
+  { label: "My Events", href: "/my-events" },
   { label: "Notifications", href: "/notifications" },
   { label: "Profile", href: "/profile" },
 ];
@@ -53,6 +54,7 @@ export function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
+                data-active={isActive}
                 className={`rounded-full px-3 py-1.5 transition ${isActive ? "bg-slate-900 text-white" : "hover:bg-slate-100 hover:text-slate-900"}`}
               >
                 {item.label}
@@ -112,20 +114,24 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu — overlays content */}
       {mobileOpen && (
-        <nav className="border-t border-slate-200 bg-white px-4 py-3 lg:hidden">
+        <nav className="absolute left-0 right-0 top-full z-30 border-t border-slate-200 bg-white px-4 py-3 shadow-lg lg:hidden">
           <div className="flex flex-col gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  data-active={isActive}
+                  onClick={() => setMobileOpen(false)}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
             {loading ? null : user ? (
               <button
                 onClick={handleLogout}
