@@ -35,6 +35,7 @@ input[type="submit"] {
   cursor: pointer;
 }
 
-button[data-active="true"] {
+button[data-active="true"],
+a[data-active="true"] {
   cursor: default;
 }
