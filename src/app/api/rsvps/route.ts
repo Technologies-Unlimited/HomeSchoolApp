@@ -22,6 +22,77 @@ export async function POST(request: Request) {
   const eventId = new ObjectId(parsed.data.eventId);
   const userId = new ObjectId(user._id);
 
+  // Enforce capacity when RSVPing "going"
+  let actualStatus: string = parsed.data.status;
+  if (parsed.data.status === "going") {
+    const event = await db.collection("events").findOne({ _id: eventId });
+    if (event?.maxAttendees) {
+      const existingRsvp = await db.collection("rsvps").findOne({ eventId, userId });
+      const alreadyGoing = existingRsvp?.status === "going";
+      if (!alreadyGoing) {
+        const goingCount = await db.collection("rsvps").countDocuments({ eventId, status: "going" });
+        if (goingCount >= event.maxAttendees) {
+          // Auto-waitlist instead of rejecting
+          const waitlistCount = await db.collection("rsvps").countDocuments({ eventId, status: "waitlisted" });
+          actualStatus = "waitlisted";
+
+          await db.collection("rsvps").updateOne(
+            { eventId, userId },
+            {
+              $set: {
+                status: "waitlisted",
+                waitlistPosition: waitlistCount + 1,
+                comment: parsed.data.comment,
+                adultCount: parsed.data.adultCount ?? 1,
+                childrenNames: parsed.data.childrenNames ?? [],
+                updatedAt: now,
+              },
+              $setOnInsert: { createdAt: now },
+            },
+            { upsert: true }
+          );
+
+          return NextResponse.json({ success: true, status: "waitlisted", waitlistPosition: waitlistCount + 1 });
+        }
+      }
+    }
+  }
+
+  // If changing from "going" to something else, promote next waitlisted person
+  if (parsed.data.status !== "going") {
+    const existingRsvp = await db.collection("rsvps").findOne({ eventId, userId });
+    if (existingRsvp?.status === "going") {
+      const nextWaitlisted = await db.collection("rsvps")
+        .find({ eventId, status: "waitlisted" })
+        .sort({ waitlistPosition: 1 })
+        .limit(1)
+        .toArray();
+
+      if (nextWaitlisted.length > 0) {
+        const promoted = nextWaitlisted[0];
+        await db.collection("rsvps").updateOne(
+          { _id: promoted._id },
+          { $set: { status: "going", waitlistPosition: null, updatedAt: new Date() } }
+        );
+
+        // Notify promoted user
+        const promotedUser = await db.collection("users").findOne(
+          { _id: promoted.userId },
+          { projection: { email: 1 } }
+        );
+        const event = await db.collection("events").findOne({ _id: eventId });
+        if (promotedUser?.email && event) {
+          const { sendNotificationEmail } = await import("@/lib/notifications");
+          sendNotificationEmail({
+            to: promotedUser.email,
+            subject: `A spot opened up: ${event.title}`,
+            html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;"><h2 style="font-size:20px;font-weight:600;">You're off the waitlist!</h2><p style="font-size:14px;color:#475569;">A spot opened up for <strong>${event.title}</strong> and you've been automatically moved from the waitlist to going. See you there!</p></div>`,
+          }).catch(() => {});
+        }
+      }
+    }
+  }
+
   await db.collection("rsvps").updateOne(
     { eventId, userId },
     {

@@ -6,6 +6,11 @@ import { eventSchema } from "@/lib/validation";
 import { parsePagination } from "@/lib/pagination";
 
 export async function GET(request: Request) {
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { limit, skip } = parsePagination(request.url);
   const db = await getDb();
   const events = await db
@@ -87,8 +92,19 @@ export async function POST(request: Request) {
     });
   }
 
+  const { logAudit } = await import("@/lib/audit");
+  const actorName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Unknown";
+
   if (eventsToInsert.length === 1) {
     const result = await db.collection("events").insertOne(eventsToInsert[0]);
+    await logAudit(db, {
+      action: "event_created",
+      actorId: user.id,
+      actorName,
+      targetType: "event",
+      targetId: result.insertedId.toString(),
+      details: `Created event "${parsed.data.title}"`,
+    });
     return NextResponse.json({
       event: { ...eventsToInsert[0], id: result.insertedId.toString() },
     });

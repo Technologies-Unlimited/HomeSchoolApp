@@ -44,6 +44,7 @@ export async function setAuthCookie(token: string) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
+    maxAge: 7 * 24 * 60 * 60,
   });
 }
 

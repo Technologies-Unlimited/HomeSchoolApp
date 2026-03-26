@@ -11,6 +11,38 @@ const publicPaths = ["/", "/login", "/register", "/pending-approval", "/verify"]
 
 const mutationMethods = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
+// Simple in-memory rate limiter
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+const RATE_LIMITS: Record<string, { maxRequests: number; windowSeconds: number }> = {
+  "/api/auth/login": { maxRequests: 5, windowSeconds: 60 },
+  "/api/auth/register": { maxRequests: 3, windowSeconds: 60 },
+  "/api/auth/forgot-password": { maxRequests: 3, windowSeconds: 3600 },
+  "/api/auth/resend-verification": { maxRequests: 3, windowSeconds: 300 },
+  "/api/admin/invite": { maxRequests: 10, windowSeconds: 3600 },
+};
+
+function checkRateLimit(pathname: string, ip: string): { allowed: boolean; retryAfter?: number } {
+  const limit = RATE_LIMITS[pathname];
+  if (!limit) return { allowed: true };
+
+  const key = `${pathname}:${ip}`;
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+
+  if (!entry || now >= entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + limit.windowSeconds * 1000 });
+    return { allowed: true };
+  }
+
+  if (entry.count >= limit.maxRequests) {
+    return { allowed: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+
+  entry.count++;
+  return { allowed: true };
+}
+
 function checkCsrf(request: NextRequest): boolean {
   if (!mutationMethods.has(request.method)) return true;
   const origin = request.headers.get("origin");
@@ -61,6 +93,18 @@ export async function proxy(request: NextRequest) {
   // CSRF check for API mutations
   if (isApi && !checkCsrf(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Rate limiting on sensitive endpoints
+  if (isApi && request.method === "POST") {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { allowed, retryAfter } = checkRateLimit(pathname, ip);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
   }
 
   // Let API routes handle their own auth

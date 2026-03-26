@@ -17,6 +17,10 @@ export default function ProfilePage() {
     lastName: "",
     phone: "",
   });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -91,7 +95,7 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      {tab === "account" && (
+      {tab === "account" && (<>
         <form
           className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-2"
           onSubmit={handleSubmit}
@@ -148,7 +152,29 @@ export default function ProfilePage() {
             {saving ? "Saving..." : "Save changes"}
           </button>
         </form>
-      )}
+
+        {/* Password change */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Change password</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            <input type="password" placeholder="Current password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500 md:col-span-2" />
+            <input type="password" placeholder="New password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+            <input type="password" placeholder="Confirm new password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+            {passwordError && <p className="text-sm text-red-600 md:col-span-2">{passwordError}</p>}
+            {passwordSuccess && <p className="text-sm text-green-600 md:col-span-2">Password changed successfully.</p>}
+            <button type="button" disabled={passwordSaving} onClick={async () => {
+              setPasswordError(null); setPasswordSuccess(false);
+              if (passwordForm.newPassword !== passwordForm.confirmPassword) { setPasswordError("Passwords do not match."); return; }
+              if (passwordForm.newPassword.length < 8) { setPasswordError("New password must be at least 8 characters."); return; }
+              setPasswordSaving(true);
+              const r = await fetch("/api/auth/change-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword }) });
+              setPasswordSaving(false);
+              if (r.ok) { setPasswordSuccess(true); setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" }); setTimeout(() => setPasswordSuccess(false), 3000); }
+              else { const d = await r.json().catch(() => ({})); setPasswordError(d.error || "Failed to change password."); }
+            }} className="h-11 rounded-lg bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 md:col-span-2">{passwordSaving ? "Changing..." : "Change password"}</button>
+          </div>
+        </div>
+      </>)}
 
       {tab === "family" && <FamilySection />}
     </section>
