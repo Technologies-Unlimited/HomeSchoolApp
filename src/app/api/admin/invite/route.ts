@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
 import { isAdmin } from "@/lib/roles";
 import { sendNotificationEmail } from "@/lib/notifications";
+import { buildInviteEmailHtml } from "@/lib/invite-email";
 import { headers } from "next/headers";
 
 export async function POST(request: Request) {
@@ -58,31 +59,15 @@ export async function POST(request: Request) {
     createdAt: now,
   });
 
-  // Build the invite email
   const inviterName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "An administrator";
   const registerUrl = `${baseUrl}/register?invite=${encodeURIComponent(normalizedEmail)}`;
-  const personalMessage = message?.trim()
-    ? `<p style="margin:16px 0;padding:12px 16px;background:#f8fafc;border-left:3px solid #cbd5e1;color:#475569;font-size:14px;border-radius:4px;">"${message.trim()}"</p>`
-    : "";
 
-  const html = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;">
-      <h2 style="font-size:20px;font-weight:600;margin-bottom:8px;">You're invited to Home School Group</h2>
-      <p style="font-size:14px;color:#475569;margin-bottom:16px;">
-        ${inviterName} has invited you to join the Home School Group community${inviteRole === "admin" ? " as an administrator" : ""}.
-      </p>
-      ${personalMessage}
-      <p style="font-size:14px;color:#475569;margin-bottom:24px;">
-        Click the button below to create your account and get started.
-      </p>
-      <a href="${registerUrl}" style="display:inline-block;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;">
-        Create your account
-      </a>
-      <p style="font-size:12px;color:#94a3b8;margin-top:24px;">
-        If you weren't expecting this invite you can safely ignore this email.
-      </p>
-    </div>
-  `;
+  const html = buildInviteEmailHtml({
+    inviterName,
+    registerUrl,
+    role: inviteRole,
+    personalMessage: message?.trim(),
+  });
 
   try {
     await sendNotificationEmail({

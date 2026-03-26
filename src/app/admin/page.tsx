@@ -78,6 +78,14 @@ export default function AdminPage() {
     } else { const d = await r.json().catch(() => ({})); setError(d.error || "Failed to send invite."); }
   }
 
+  async function handleResendInvite(inviteId: string) {
+    setActionLoading(inviteId); setError(null);
+    const r = await fetch(`/api/admin/invite/${inviteId}/resend`, { method: "POST" });
+    setActionLoading(null);
+    if (r.ok) { showMsg("Invite resent!"); loadInvites(); }
+    else { const d = await r.json().catch(() => ({})); setError(d.error || "Failed to resend."); }
+  }
+
   useEffect(() => { if (!user || !isAdminUser) return; loadOverview(); }, [user, isAdminUser, loadOverview]);
   useEffect(() => { if (tab === "users" && !usersLoaded) loadUsers(); }, [tab, usersLoaded]);
   useEffect(() => { if (tab === "announcements") loadAnnouncements(); }, [tab]);
@@ -352,8 +360,9 @@ export default function AdminPage() {
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${invite.role === "admin" ? "bg-purple-50 text-purple-700" : "bg-slate-100 text-slate-600"}`}>{invite.role === "admin" ? "Admin" : "Member"}</span>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${invite.status === "pending" ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>{invite.status}</span>
                 </div>
-                <div className="text-xs text-slate-400">
-                  {invite.invitedByName} — {new Date(invite.createdAt).toLocaleDateString()}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400">{invite.invitedByName} — {new Date(invite.createdAt).toLocaleDateString()}</span>
+                  <button onClick={() => handleResendInvite(invite.id)} disabled={actionLoading === invite.id} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60">{actionLoading === invite.id ? "..." : "Resend"}</button>
                 </div>
               </div>
             ))}
