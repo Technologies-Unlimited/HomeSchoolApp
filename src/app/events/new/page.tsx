@@ -7,6 +7,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { EVENT_CATEGORIES } from "@/lib/validation";
 import { LocationPicker } from "@/components/location-picker";
 import { DIETARY_OPTIONS } from "@/lib/dietary-options";
+import { GRADE_OPTIONS } from "@/lib/grade-options";
 
 const categoryLabels: Record<string, string> = {
   "field-trip": "Field Trip",
@@ -70,6 +71,8 @@ function NewEventForm() {
         if (event.fee?.notes) setValue("feeNotes", event.fee.notes);
         if (event.ageRange?.min) setValue("ageMin", String(event.ageRange.min));
         if (event.ageRange?.max) setValue("ageMax", String(event.ageRange.max));
+        if (event.gradeRange?.min) setValue("gradeMin", event.gradeRange.min);
+        if (event.gradeRange?.max) setValue("gradeMax", event.gradeRange.max);
         if (event.maxAttendees) setValue("maxAttendees", String(event.maxAttendees));
         if (event.location) setLocation({ name: event.location.name ?? "", address: event.location.address ?? "" });
         if (event.attachments?.length) setAttachments(event.attachments);
@@ -103,6 +106,8 @@ function NewEventForm() {
     const feeAmount = parseFloat(form.get("feeAmount") as string);
     const ageMin = parseInt(form.get("ageMin") as string);
     const ageMax = parseInt(form.get("ageMax") as string);
+    const gradeMin = (form.get("gradeMin") as string) || undefined;
+    const gradeMax = (form.get("gradeMax") as string) || undefined;
     const maxAttendees = parseInt(form.get("maxAttendees") as string);
     const recurringFreq = form.get("recurringFrequency") as string;
     const recurringCount = parseInt(form.get("recurringCount") as string);
@@ -131,6 +136,10 @@ function NewEventForm() {
         ageRange: (ageMin >= 0 || ageMax > 0) ? {
           min: ageMin >= 0 ? ageMin : undefined,
           max: ageMax > 0 ? ageMax : undefined,
+        } : undefined,
+        gradeRange: (gradeMin || gradeMax) ? {
+          min: gradeMin,
+          max: gradeMax,
         } : undefined,
         maxAttendees: maxAttendees > 0 ? maxAttendees : undefined,
         recurring: recurringFreq ? {
@@ -251,15 +260,29 @@ function NewEventForm() {
             </div>
 
             {/* Age / Grade range */}
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Age range</p>
-            <div className="grid gap-4 md:grid-cols-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Age & grade range</p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                Minimum age
+                Min age
                 <input type="number" name="ageMin" min="0" max="18" defaultValue="" placeholder="Any" className="h-9 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                Maximum age
+                Max age
                 <input type="number" name="ageMax" min="0" max="18" defaultValue="" placeholder="Any" className="h-9 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+                Min grade
+                <select name="gradeMin" className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-500">
+                  <option value="">Any</option>
+                  {GRADE_OPTIONS.filter((g) => g.value).map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+                Max grade
+                <select name="gradeMax" className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-500">
+                  <option value="">Any</option>
+                  {GRADE_OPTIONS.filter((g) => g.value).map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                </select>
               </label>
             </div>
 

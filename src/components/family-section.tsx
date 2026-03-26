@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { DIETARY_OPTIONS } from "@/lib/dietary-options";
+import { GRADE_OPTIONS } from "@/lib/grade-options";
 
 interface ChildProfile {
   _id: string;
@@ -62,8 +63,18 @@ function ChildForm({ form, setForm, onSave, onCancel, saving, submitLabel }: {
     <div className="grid gap-3 sm:grid-cols-2">
       <input type="text" placeholder="First name *" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className={inputClass} />
       <input type="text" placeholder="Last name *" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className={inputClass} />
-      <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} className={inputClass} />
-      <input type="text" placeholder="Grade (e.g. 3rd, K)" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} className={inputClass} />
+      <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+        Date of birth
+        <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} className={inputClass} />
+      </label>
+      <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+        Grade
+        <select value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} className={`${inputClass} bg-white`}>
+          {GRADE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
       <div className="sm:col-span-2 space-y-2">
         <p className="text-xs font-medium text-slate-500">Dietary needs & allergies</p>
         <div className="flex flex-wrap gap-1.5">
