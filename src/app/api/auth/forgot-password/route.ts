@@ -26,8 +26,8 @@ export async function POST(request: Request) {
     { $set: { resetToken, resetTokenExpiry } }
   );
 
-  const baseUrl = request.headers.get("origin") || request.headers.get("host") || "http://localhost:3000";
-  const resetUrl = `${baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`}/reset-password/${resetToken}`;
+  const { getBaseUrl } = await import("@/lib/base-url");
+  const resetUrl = `${getBaseUrl()}/reset-password/${resetToken}`;
 
   try {
     await sendNotificationEmail({

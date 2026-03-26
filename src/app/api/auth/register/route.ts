@@ -113,8 +113,8 @@ export async function POST(request: Request) {
     }
 
     // Send verification email
-    const baseUrl = request.headers.get("origin") || request.headers.get("host") || "http://localhost:3000";
-    const verifyUrl = `${baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`}/verify/${verificationToken}`;
+    const { getBaseUrl } = await import("@/lib/base-url");
+    const verifyUrl = `${getBaseUrl()}/verify/${verificationToken}`;
 
     try {
       await sendNotificationEmail({

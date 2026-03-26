@@ -28,8 +28,8 @@ export async function POST(request: Request) {
     await db.collection("users").updateOne({ _id: user._id }, { $set: { verificationToken: token } });
   }
 
-  const baseUrl = request.headers.get("origin") || request.headers.get("host") || "http://localhost:3000";
-  const verifyUrl = `${baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`}/verify/${token}`;
+  const { getBaseUrl } = await import("@/lib/base-url");
+  const verifyUrl = `${getBaseUrl()}/verify/${token}`;
 
   await sendNotificationEmail({
     to: userDoc.email,

@@ -6,7 +6,7 @@ import { isAdmin } from "@/lib/roles";
 import { isValidObjectId } from "@/lib/objectid";
 import { sendNotificationEmail } from "@/lib/notifications";
 import { buildInviteEmailHtml } from "@/lib/invite-email";
-import { headers } from "next/headers";
+
 
 export async function POST(
   request: Request,
@@ -31,13 +31,10 @@ export async function POST(
     return NextResponse.json({ error: "Invite not found." }, { status: 404 });
   }
 
-  const headerList = await headers();
-  const host = headerList.get("host") ?? "localhost:3000";
-  const protocol = headerList.get("x-forwarded-proto") ?? "http";
-  const baseUrl = `${protocol}://${host}`;
+  const { getBaseUrl } = await import("@/lib/base-url");
 
   const inviterName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "An administrator";
-  const registerUrl = `${baseUrl}/register?invite=${encodeURIComponent(invite.email)}`;
+  const registerUrl = `${getBaseUrl()}/register?invite=${encodeURIComponent(invite.email)}`;
 
   const html = buildInviteEmailHtml({
     inviterName,

@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/session";
 import { isAdmin } from "@/lib/roles";
 import { sendNotificationEmail } from "@/lib/notifications";
 import { buildInviteEmailHtml } from "@/lib/invite-email";
-import { headers } from "next/headers";
+
 
 export async function POST(request: Request) {
   const user = await getUserFromRequest(request);
@@ -41,11 +41,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "An invite has already been sent to this email." }, { status: 409 });
   }
 
-  // Build the base URL from the request
-  const headerList = await headers();
-  const host = headerList.get("host") ?? "localhost:3000";
-  const protocol = headerList.get("x-forwarded-proto") ?? "http";
-  const baseUrl = `${protocol}://${host}`;
+  const { getBaseUrl } = await import("@/lib/base-url");
+  const baseUrl = getBaseUrl();
 
   // Store the invite
   const now = new Date();
