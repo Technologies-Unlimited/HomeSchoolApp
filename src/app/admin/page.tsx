@@ -88,6 +88,15 @@ export default function AdminPage() {
     else { const d = await r.json().catch(() => ({})); setError(d.error || "Failed to resend."); }
   }
 
+  async function handleCancelInvite(inviteId: string) {
+    if (!confirm("Cancel this invite?")) return;
+    setActionLoading(inviteId); setError(null);
+    const r = await fetch(`/api/admin/invite/${inviteId}`, { method: "DELETE" });
+    setActionLoading(null);
+    if (r.ok) { showMsg("Invite cancelled."); setInvites((prev) => prev.filter((i) => i.id !== inviteId)); }
+    else { const d = await r.json().catch(() => ({})); setError(d.error || "Failed to cancel."); }
+  }
+
   useEffect(() => { if (!user || !isAdminUser) return; loadOverview(); }, [user, isAdminUser, loadOverview]);
   useEffect(() => { if (tab === "users" && !usersLoaded) loadUsers(); }, [tab, usersLoaded]);
   useEffect(() => { if (tab === "announcements") loadAnnouncements(); }, [tab]);
@@ -379,6 +388,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-400">{invite.invitedByName} — {new Date(invite.createdAt).toLocaleDateString()}</span>
                   <button onClick={() => handleResendInvite(invite.id)} disabled={actionLoading === invite.id} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60">{actionLoading === invite.id ? "..." : "Resend"}</button>
+                  <button onClick={() => handleCancelInvite(invite.id)} disabled={actionLoading === invite.id} className="text-xs font-semibold text-red-500 hover:text-red-700 disabled:opacity-60">Cancel</button>
                 </div>
               </div>
             ))}
