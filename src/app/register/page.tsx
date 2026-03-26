@@ -1,10 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteEmail = searchParams.get("invite") ?? "";
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasSpouse, setHasSpouse] = useState(false);
@@ -71,7 +73,7 @@ export default function RegisterPage() {
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 md:col-span-2">
           Email
-          <input type="email" name="email" required autoComplete="email" className={inputClass} />
+          <input type="email" name="email" required autoComplete="email" defaultValue={inviteEmail} readOnly={!!inviteEmail} className={`${inputClass} ${inviteEmail ? "bg-slate-50 text-slate-500" : ""}`} />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 md:col-span-2">
           Phone
