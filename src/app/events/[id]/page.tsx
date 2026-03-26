@@ -30,6 +30,7 @@ interface EventDetail {
   ageRange?: { min?: number; max?: number };
   maxAttendees?: number;
   recurring?: { frequency: string; endAfterCount?: number };
+  gradeRange?: { min?: string; max?: string };
   attachments?: { name: string; url: string }[];
   dietaryAccommodations?: string[];
 }
@@ -279,6 +280,11 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
           {event.ageRange && (event.ageRange.min !== undefined || event.ageRange.max !== undefined) && (
             <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
               Ages {event.ageRange.min ?? 0}–{event.ageRange.max ?? "18+"}
+            </span>
+          )}
+          {event.gradeRange && (event.gradeRange.min || event.gradeRange.max) && (
+            <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+              Grades {event.gradeRange.min ?? "any"}–{event.gradeRange.max ?? "any"}
             </span>
           )}
           {event.maxAttendees && (
@@ -586,11 +592,9 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
       {/* Volunteer slots + Carpool */}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">Volunteer sign-ups</h2>
           <VolunteerSlots eventId={params.id} canManage={!!canManage} />
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">Carpools</h2>
           <CarpoolBoard eventId={params.id} />
         </div>
       </div>
