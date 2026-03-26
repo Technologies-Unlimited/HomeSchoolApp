@@ -321,7 +321,7 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
             {/* Card: Attendees */}
             <button
               onClick={() => setShowAttendees(!showAttendees)}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left transition hover:border-slate-300 hover:shadow-md cursor-pointer"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left transition hover:border-slate-300 hover:shadow-md"
             >
               <h3 className="text-sm font-semibold text-slate-900">Attendees</h3>
               <p className="mt-1 text-xs text-slate-500">
