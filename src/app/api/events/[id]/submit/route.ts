@@ -12,23 +12,28 @@ export async function POST(
   if (!isValidObjectId(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
-  const user = await getUserFromRequest(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
-  const db = await getDb();
-  const result = await db.collection("events").updateOne(
-    { _id: new ObjectId(id), creatorId: new ObjectId(user._id), status: "draft" },
-    { $set: { status: "pending", updatedAt: new Date() } }
-  );
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  if (result.matchedCount === 0) {
-    return NextResponse.json(
-      { error: "Event not found, not owned by you, or not in draft status." },
-      { status: 400 }
+    const db = await getDb();
+    const result = await db.collection("events").updateOne(
+      { _id: new ObjectId(id), creatorId: new ObjectId(user._id), status: "draft" },
+      { $set: { status: "pending", updatedAt: new Date() } }
     );
-  }
 
-  return NextResponse.json({ success: true });
+    if (result.matchedCount === 0) {
+      return NextResponse.json(
+        { error: "Event not found, not owned by you, or not in draft status." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
 }

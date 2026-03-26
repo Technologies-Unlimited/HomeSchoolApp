@@ -14,13 +14,17 @@ export async function GET(
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
-  const db = await getDb();
-  const form = await db.collection("forms").findOne({ _id: new ObjectId(id) });
-  if (!form) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  try {
+    const db = await getDb();
+    const form = await db.collection("forms").findOne({ _id: new ObjectId(id) });
+    if (!form) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
-  return NextResponse.json({ form: { ...form, id: form._id.toString() } });
+    return NextResponse.json({ form: { ...form, id: form._id.toString() } });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
 }
 
 export async function PATCH(
@@ -31,33 +35,38 @@ export async function PATCH(
   if (!isValidObjectId(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
-  const user = await getUserFromRequest(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const db = await getDb();
+    const existing = await db.collection("forms").findOne({ _id: new ObjectId(id) });
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (existing.creatorId?.toString() !== user._id.toString() && !isAdmin(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const update: Record<string, unknown> = {};
+    if (Array.isArray(body?.fields)) update.fields = body.fields;
+    if (typeof body?.formType === "string") update.formType = body.formType;
+    if (typeof body?.isActive === "boolean") update.isActive = body.isActive;
+
+    await db.collection("forms").updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { ...update, updatedAt: new Date() } }
+    );
+
+    const updatedForm = await db.collection("forms").findOne({ _id: new ObjectId(id) });
+    return NextResponse.json({ form: updatedForm ? { ...updatedForm, id: updatedForm._id.toString() } : null });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
-
-  const db = await getDb();
-  const existing = await db.collection("forms").findOne({ _id: new ObjectId(id) });
-  if (!existing) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-  if (existing.creatorId?.toString() !== user._id.toString() && !isAdmin(user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const body = await request.json();
-  const update: Record<string, unknown> = {};
-  if (Array.isArray(body?.fields)) update.fields = body.fields;
-  if (typeof body?.formType === "string") update.formType = body.formType;
-  if (typeof body?.isActive === "boolean") update.isActive = body.isActive;
-
-  await db.collection("forms").updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { ...update, updatedAt: new Date() } }
-  );
-
-  const updatedForm = await db.collection("forms").findOne({ _id: new ObjectId(id) });
-  return NextResponse.json({ form: updatedForm ? { ...updatedForm, id: updatedForm._id.toString() } : null });
 }
 
 export async function DELETE(
@@ -68,21 +77,26 @@ export async function DELETE(
   if (!isValidObjectId(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
-  const user = await getUserFromRequest(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
-  const db = await getDb();
-  const existing = await db.collection("forms").findOne({ _id: new ObjectId(id) });
-  if (!existing) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-  if (existing.creatorId?.toString() !== user._id.toString() && !isAdmin(user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  await db.collection("forms").deleteOne({ _id: new ObjectId(id) });
+    const db = await getDb();
+    const existing = await db.collection("forms").findOne({ _id: new ObjectId(id) });
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (existing.creatorId?.toString() !== user._id.toString() && !isAdmin(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  return NextResponse.json({ success: true });
+    await db.collection("forms").deleteOne({ _id: new ObjectId(id) });
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
 }

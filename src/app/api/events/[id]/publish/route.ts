@@ -13,21 +13,26 @@ export async function POST(
   if (!isValidObjectId(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
-  const user = await getUserFromRequest(request);
-  if (!user || !isAdmin(user.role)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
-  const db = await getDb();
-  await db.collection("events").updateOne(
-    { _id: new ObjectId(id) },
-    {
-      $set: {
-        status: "published",
-        updatedAt: new Date(),
-      },
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user || !isAdmin(user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-  );
 
-  return NextResponse.json({ success: true });
+    const db = await getDb();
+    await db.collection("events").updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: "published",
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
 }

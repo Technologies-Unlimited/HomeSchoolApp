@@ -14,36 +14,41 @@ export async function POST(
   if (!isValidObjectId(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
-  const user = await getUserFromRequest(request);
-  if (!user || !isAdmin(user.role)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
-  const db = await getDb();
-  const event = await db.collection("events").findOne({ _id: new ObjectId(id) });
-
-  await db.collection("events").updateOne(
-    { _id: new ObjectId(id) },
-    {
-      $set: {
-        status: "published",
-        approvedBy: new ObjectId(user._id),
-        approvedAt: new Date(),
-        updatedAt: new Date(),
-      },
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user || !isAdmin(user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-  );
 
-  const actorName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Admin";
-  await logAudit(db, {
-    action: "event_approved",
-    actorId: user.id,
-    actorName,
-    targetType: "event",
-    targetId: id,
-    details: `Approved event "${event?.title ?? id}"`,
-    previousState: { status: event?.status },
-  });
+    const db = await getDb();
+    const event = await db.collection("events").findOne({ _id: new ObjectId(id) });
 
-  return NextResponse.json({ success: true });
+    await db.collection("events").updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: "published",
+          approvedBy: new ObjectId(user._id),
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    const actorName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Admin";
+    await logAudit(db, {
+      action: "event_approved",
+      actorId: user.id,
+      actorName,
+      targetType: "event",
+      targetId: id,
+      details: `Approved event "${event?.title ?? id}"`,
+      previousState: { status: event?.status },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
 }

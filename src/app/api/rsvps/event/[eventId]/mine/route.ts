@@ -12,16 +12,21 @@ export async function GET(
   if (!isValidObjectId(eventId)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
-  const user = await getUserFromRequest(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const db = await getDb();
+    const rsvp = await db.collection("rsvps").findOne({
+      eventId: new ObjectId(eventId),
+      userId: new ObjectId(user._id),
+    });
+
+    return NextResponse.json({ rsvp: rsvp ? { ...rsvp, id: rsvp._id.toString() } : null });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
-
-  const db = await getDb();
-  const rsvp = await db.collection("rsvps").findOne({
-    eventId: new ObjectId(eventId),
-    userId: new ObjectId(user._id),
-  });
-
-  return NextResponse.json({ rsvp: rsvp ? { ...rsvp, id: rsvp._id.toString() } : null });
 }
