@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 
 interface EventItem { id: string; title: string; startDate?: string; category?: string; location?: { name?: string } }
-interface AnnouncementItem { id: string; title: string; content: string; priority: string; pinned: boolean; authorName?: string; createdAt?: string }
+interface AnnouncementItem { id: string; title: string; content: string; priority: string; visibility?: string; pinned: boolean; authorName?: string; createdAt?: string }
 
 const priorityStyles: Record<string, string> = { urgent: "border-red-200 bg-red-50", important: "border-amber-200 bg-amber-50", normal: "border-slate-200 bg-white" };
 

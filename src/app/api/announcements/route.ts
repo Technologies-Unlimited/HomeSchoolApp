@@ -9,18 +9,19 @@ const VALID_PRIORITIES = ["normal", "important", "urgent"] as const;
 
 export async function GET(request: Request) {
   const user = await getUserFromRequest(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { limit, skip, page } = parsePagination(request.url);
   const db = await getDb();
 
   const now = new Date();
-  const filter = {
+  const filter: Record<string, unknown> = {
     isDeleted: { $ne: true },
     $or: [{ publishAt: { $exists: false } }, { publishAt: null }, { publishAt: { $lte: now } }],
   };
+
+  // Unauthenticated users only see public announcements
+  if (!user) {
+    filter.visibility = "public";
+  }
 
   const [announcements, total] = await Promise.all([
     db
@@ -63,6 +64,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Content is required." }, { status: 400 });
   }
 
+  const VALID_VISIBILITIES = ["public", "members"] as const;
+  const resolvedVisibility = VALID_VISIBILITIES.includes(body.visibility) ? body.visibility : "members";
   const resolvedPriority = VALID_PRIORITIES.includes(priority) ? priority : "normal";
   const resolvedPinned = typeof pinned === "boolean" ? pinned : false;
 
@@ -74,6 +77,7 @@ export async function POST(request: Request) {
     title: title.trim(),
     content: content.trim(),
     priority: resolvedPriority,
+    visibility: resolvedVisibility,
     pinned: resolvedPinned,
     publishAt,
     authorId: new ObjectId(user._id),

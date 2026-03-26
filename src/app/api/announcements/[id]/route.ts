@@ -6,9 +6,10 @@ import { isAdmin } from "@/lib/roles";
 import { isValidObjectId } from "@/lib/objectid";
 
 const VALID_PRIORITIES = ["normal", "important", "urgent"] as const;
+const VALID_VISIBILITIES = ["public", "members"] as const;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -24,6 +25,14 @@ export async function GET(
 
   if (!announcement) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Members-only announcements require authentication
+  if (announcement.visibility !== "public") {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   return NextResponse.json({
@@ -71,6 +80,9 @@ export async function PATCH(
   }
   if (typeof body.pinned === "boolean") {
     update.pinned = body.pinned;
+  }
+  if (VALID_VISIBILITIES.includes(body.visibility)) {
+    update.visibility = body.visibility;
   }
 
   await db.collection("announcements").updateOne(
