@@ -32,6 +32,11 @@ function RegisterForm() {
       setLoading(false);
       return;
     }
+    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError("Password must contain at least one uppercase letter, one lowercase letter, and one number.");
+      setLoading(false);
+      return;
+    }
 
     const response = await fetch("/api/auth/register", {
       method: "POST",

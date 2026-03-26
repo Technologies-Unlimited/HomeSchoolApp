@@ -144,6 +144,7 @@ export const config = {
     "/events/:path*",
     "/calendar/:path*",
     "/announcements/:path*",
+    "/my-events/:path*",
     "/api/:path*",
   ],
 };
