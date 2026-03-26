@@ -157,9 +157,19 @@ export default function ProfilePage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Change password</h2>
           <div className="grid gap-3 md:grid-cols-2">
-            <input type="password" placeholder="Current password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500 md:col-span-2" />
-            <input type="password" placeholder="New password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
-            <input type="password" placeholder="Confirm new password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 md:col-span-2">
+              Current password
+              <input type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+              New password
+              <input type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+              <span className="text-xs text-slate-500 font-normal">Min 8 chars, uppercase, lowercase, number</span>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+              Confirm new password
+              <input type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="h-11 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+            </label>
             {passwordError && <p className="text-sm text-red-600 md:col-span-2">{passwordError}</p>}
             {passwordSuccess && <p className="text-sm text-green-600 md:col-span-2">Password changed successfully.</p>}
             <button type="button" disabled={passwordSaving} onClick={async () => {

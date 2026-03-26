@@ -300,15 +300,18 @@ export default function AdminPage() {
               <th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th>
             </tr></thead>
             <tbody>
-              {users.filter((userItem) => {
-                const searchLower = userSearch.toLowerCase();
-                if (searchLower && !`${userItem.firstName} ${userItem.lastName} ${userItem.email}`.toLowerCase().includes(searchLower)) return false;
-                if (userRoleFilter !== "all" && userItem.role !== userRoleFilter) return false;
-                if (userStatusFilter === "approved" && !userItem.approved) return false;
-                if (userStatusFilter === "pending" && userItem.approved) return false;
-                if (userStatusFilter === "deactivated" && userItem.isActive !== false) return false;
-                return true;
-              }).map((userItem) => (
+              {(() => {
+                const filtered = users.filter((userItem) => {
+                  const searchLower = userSearch.toLowerCase();
+                  if (searchLower && !`${userItem.firstName} ${userItem.lastName} ${userItem.email}`.toLowerCase().includes(searchLower)) return false;
+                  if (userRoleFilter !== "all" && userItem.role !== userRoleFilter) return false;
+                  if (userStatusFilter === "approved" && !userItem.approved) return false;
+                  if (userStatusFilter === "pending" && userItem.approved) return false;
+                  if (userStatusFilter === "deactivated" && userItem.isActive !== false) return false;
+                  return true;
+                });
+                if (filtered.length === 0) return <tr><td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">No users match your filters.</td></tr>;
+                return filtered.map((userItem) => (
                 <tr key={userItem.id} className="border-b border-slate-100">
                   <td className="px-4 py-2 font-medium text-slate-800">{userItem.firstName} {userItem.lastName}</td>
                   <td className="px-4 py-2 text-slate-600">{userItem.email}</td>
@@ -331,7 +334,8 @@ export default function AdminPage() {
                     )}
                   </td>
                 </tr>
-              ))}
+              ));
+              })()}
             </tbody>
           </table>
         </div>

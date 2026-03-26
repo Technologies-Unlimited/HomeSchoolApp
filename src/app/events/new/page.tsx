@@ -103,6 +103,14 @@ function NewEventForm() {
     const form = new FormData(event.currentTarget);
     const publishNow = form.get("publish") === "true";
 
+    const startDate = form.get("startDate") as string;
+    const endDate = form.get("endDate") as string;
+    if (endDate && startDate && new Date(endDate) < new Date(startDate)) {
+      setError("End date must be after start date.");
+      setSaving(false);
+      return;
+    }
+
     const feeAmount = parseFloat(form.get("feeAmount") as string);
     const ageMin = parseInt(form.get("ageMin") as string);
     const ageMax = parseInt(form.get("ageMax") as string);
