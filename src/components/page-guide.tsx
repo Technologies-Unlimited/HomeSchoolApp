@@ -12,13 +12,30 @@ const PAGE_GUIDES: Record<string, { headline: string; summary: string; details: 
       "Quick action cards give you one-click access to create events, browse the calendar, check the family directory, or update your profile.",
     ],
   },
-  events: {
-    headline: "Browse and create events",
-    summary: "Find upcoming gatherings, field trips, and activities. RSVP, volunteer, or create your own event for the group.",
+  events_directory: {
+    headline: "Browse community events",
+    summary: "Find upcoming gatherings, field trips, and activities. Filter by category, RSVP, and sign up for volunteer slots.",
     details: [
-      "Browse events by category, search by name, or filter to find exactly what you're looking for.",
+      "Browse all published events across the group. Filter by category to find field trips, co-op classes, park days, and more.",
       "Each event can include details like location, age ranges, fees, volunteer slots, and custom sign-up forms.",
-      "When you create an event it goes to admins for approval before appearing on the calendar — this keeps the schedule organized and avoids conflicts.",
+      "Click any event to see full details, RSVP, join a carpool, or sign up as a volunteer.",
+    ],
+  },
+  events_drafts: {
+    headline: "Your draft events",
+    summary: "Events you've created that haven't been published yet. Edit them or submit for admin review.",
+    details: [
+      "Draft events are only visible to you until you submit them for review.",
+      "Once submitted, an admin will review and either approve (publish) or send it back with feedback.",
+      "You can continue editing a draft event from the event detail page before submitting.",
+    ],
+  },
+  events_mine: {
+    headline: "Your personal schedule",
+    summary: "See all events you've RSVP'd to plus events you've created, all in one place.",
+    details: [
+      "Events you're attending shows everything you've RSVP'd going, maybe, or waitlisted to — so you can quickly see your upcoming commitments.",
+      "Events you created shows your published events so you can track attendance and manage them.",
     ],
   },
   calendar: {

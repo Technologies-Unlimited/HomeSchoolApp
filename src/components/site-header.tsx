@@ -13,7 +13,6 @@ const publicNavItems = [
 ];
 
 const authNavItems = [
-  { label: "My Events", href: "/my-events" },
   { label: "Notifications", href: "/notifications" },
   { label: "Profile", href: "/profile" },
 ];
