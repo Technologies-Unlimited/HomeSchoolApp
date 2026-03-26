@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageGuide } from "@/components/page-guide";
 
 interface DirectoryEntry {
   id: string;
@@ -134,15 +135,9 @@ export default function DirectoryPage() {
   return (
     <section className="flex flex-col gap-6">
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Directory" }]} />
-
-      <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          Family Directory
-        </h1>
-        <p className="text-sm text-slate-600">
-          Browse families in our home-school community. Manage your visibility settings below.
-        </p>
-      </div>
+      <PageGuide pageKey="directory">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Family Directory</h1>
+      </PageGuide>
 
       {/* Opt-in banner */}
       {!preferencesLoading && !preferences.directoryOptIn && (
@@ -328,7 +323,7 @@ function ToggleRow({
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${
           checked ? "bg-slate-900" : "bg-slate-300"
         }`}
       >

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageGuide } from "@/components/page-guide";
 
 interface CalendarEvent {
   id: string;
@@ -52,16 +53,15 @@ export default function CalendarPage() {
   return (
     <section className="flex flex-col gap-6">
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Calendar" }]} />
-      <div className="space-y-2">
+      <PageGuide pageKey="calendar">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Calendar</h1>
-        <p className="text-sm text-slate-600">All events organized by date.</p>
-      </div>
+      </PageGuide>
 
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1 w-fit">
-        <button onClick={() => setTab("upcoming")} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "upcoming" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+        <button onClick={() => setTab("upcoming")} data-active={tab === "upcoming"} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "upcoming" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
           Upcoming ({upcoming.length})
         </button>
-        <button onClick={() => setTab("past")} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "past" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+        <button onClick={() => setTab("past")} data-active={tab === "past"} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "past" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
           Past ({past.length})
         </button>
       </div>

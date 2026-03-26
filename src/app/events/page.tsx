@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageGuide } from "@/components/page-guide";
 
 const categoryLabels: Record<string, string> = {
   "field-trip": "Field Trip",
@@ -54,8 +55,8 @@ export default function EventsPage() {
   return (
     <section className="flex flex-col gap-6">
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Events" }]} />
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <PageGuide pageKey="events">
+        <div className="flex flex-wrap items-center justify-between gap-4 flex-1">
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Events</h1>
           {user && (
             <div className="flex gap-2">
@@ -68,8 +69,7 @@ export default function EventsPage() {
             </div>
           )}
         </div>
-        <p className="text-sm text-slate-600">Plan upcoming gatherings and track RSVPs across the community.</p>
-      </div>
+      </PageGuide>
 
       {/* Category filter */}
       {activeCategories.length > 0 && (

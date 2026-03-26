@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
+import { PageGuide } from "@/components/page-guide";
 
 interface EventItem { id: string; title: string; startDate?: string; category?: string; location?: { name?: string } }
 interface AnnouncementItem { id: string; title: string; content: string; priority: string; visibility?: string; pinned: boolean; authorName?: string; createdAt?: string }
@@ -63,12 +64,11 @@ export default function Home() {
       )}
 
       {/* Welcome */}
-      <section className="space-y-2">
+      <PageGuide pageKey="home">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           {user ? `Welcome back, ${user.firstName ?? "there"}` : "Home School Group"}
         </h1>
-        <p className="text-sm text-slate-600">Manage events, RSVPs, and community updates in one place.</p>
-      </section>
+      </PageGuide>
 
       {/* Quick actions */}
       {user && user.approved && (

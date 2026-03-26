@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageGuide } from "@/components/page-guide";
 
 interface PendingEvent { id: string; title: string; startDate?: string }
 interface PendingMember { id: string; firstName?: string; lastName?: string; email: string; createdAt?: string }
@@ -11,6 +12,7 @@ interface UserItem { id: string; email: string; firstName?: string; lastName?: s
 const VALID_ROLES = ["user", "admin", "super_admin"];
 const PRIORITIES = ["normal", "important", "urgent"] as const;
 const priorityStyles: Record<string, string> = { normal: "bg-slate-100 text-slate-700", important: "bg-amber-100 text-amber-800", urgent: "bg-red-100 text-red-800" };
+
 
 export default function AdminPage() {
   const { user, loading } = useCurrentUser();
@@ -169,10 +171,10 @@ export default function AdminPage() {
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Admin" }]} />
       <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Admin dashboard</h1>
 
-      {/* Tabs */}
+      {/* Tabs — guides are inside each tab */}
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
         {(["overview", "users", "announcements", "invites"] as const).map((tabName) => (
-          <button key={tabName} onClick={() => setTab(tabName)} className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold capitalize transition ${tab === tabName ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+          <button key={tabName} onClick={() => setTab(tabName)} data-active={tab === tabName} className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold capitalize transition ${tab === tabName ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
             {tabName}
           </button>
         ))}
@@ -184,6 +186,9 @@ export default function AdminPage() {
       {/* ─── OVERVIEW TAB ─── */}
       {tab === "overview" && (
         <div className="flex flex-col gap-6">
+          <PageGuide pageKey="admin_overview">
+            <h2 className="text-lg font-semibold text-slate-900">Overview</h2>
+          </PageGuide>
           {pendingMembers.length > 0 && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
               <h2 className="text-sm font-semibold text-slate-900">Pending members ({pendingMembers.length})</h2>
@@ -227,6 +232,10 @@ export default function AdminPage() {
 
       {/* ─── USERS TAB ─── */}
       {tab === "users" && (
+        <div className="flex flex-col gap-6">
+          <PageGuide pageKey="admin_users">
+            <h2 className="text-lg font-semibold text-slate-900">Users</h2>
+          </PageGuide>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead><tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -253,11 +262,15 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+        </div>
       )}
 
       {/* ─── ANNOUNCEMENTS TAB ─── */}
       {tab === "announcements" && (
         <div className="flex flex-col gap-6">
+          <PageGuide pageKey="admin_announcements">
+            <h2 className="text-lg font-semibold text-slate-900">Announcements</h2>
+          </PageGuide>
           {/* Create/edit form */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-900 mb-4">{editingAnnouncementId ? "Edit announcement" : "New announcement"}</h2>
@@ -327,6 +340,9 @@ export default function AdminPage() {
       {/* ─── INVITES TAB ─── */}
       {tab === "invites" && (
         <div className="flex flex-col gap-6">
+          <PageGuide pageKey="admin_invites">
+            <h2 className="text-lg font-semibold text-slate-900">Invites</h2>
+          </PageGuide>
           {/* Send invite form */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-900 mb-4">Send an invite</h2>

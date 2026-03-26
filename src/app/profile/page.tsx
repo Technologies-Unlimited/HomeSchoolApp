@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageGuide } from "@/components/page-guide";
 import { FamilySection } from "@/components/family-section";
 
 export default function ProfilePage() {
@@ -64,16 +65,15 @@ export default function ProfilePage() {
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Profile" }]} />
-
-      <div className="space-y-2">
+      <PageGuide pageKey="profile">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Profile</h1>
-        <p className="text-sm text-slate-600">Manage your account and family information.</p>
-      </div>
+      </PageGuide>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
         <button
           onClick={() => setTab("account")}
+          data-active={tab === "account"}
           className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${
             tab === "account" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
           }`}
@@ -82,6 +82,7 @@ export default function ProfilePage() {
         </button>
         <button
           onClick={() => setTab("family")}
+          data-active={tab === "family"}
           className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${
             tab === "family" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
           }`}

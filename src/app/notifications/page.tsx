@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageGuide } from "@/components/page-guide";
 
 interface NotificationItem { id: string; message?: string; type?: string; createdAt?: string }
 interface Preferences { emailEnabled: boolean; reminder1Day: boolean; reminder1Week: boolean; reminder2Weeks: boolean; reminder1Month: boolean; reminderCustomDays: number | null }
@@ -60,11 +61,13 @@ export default function NotificationsPage() {
   return (
     <section className="flex flex-col gap-6">
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Notifications" }]} />
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Notifications</h1>
+      <PageGuide pageKey="notifications">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Notifications</h1>
+      </PageGuide>
 
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1 w-fit">
-        <button onClick={() => setTab("notifications")} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "notifications" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>Inbox</button>
-        <button onClick={() => setTab("preferences")} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "preferences" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>Preferences</button>
+        <button onClick={() => setTab("notifications")} data-active={tab === "notifications"} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "notifications" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>Inbox</button>
+        <button onClick={() => setTab("preferences")} data-active={tab === "preferences"} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "preferences" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>Preferences</button>
       </div>
 
       {tab === "notifications" && (
