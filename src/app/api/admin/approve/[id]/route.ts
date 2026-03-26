@@ -5,6 +5,7 @@ import { getUserFromRequest } from "@/lib/session";
 import { isAdmin } from "@/lib/roles";
 import { isValidObjectId } from "@/lib/objectid";
 import { sendNotificationEmail } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 
 // POST: Approve a user
 export async function POST(
@@ -35,6 +36,18 @@ export async function POST(
     { _id: new ObjectId(id) },
     { $set: { approved: true, approvedAt: new Date(), approvedBy: admin._id, updatedAt: new Date() } }
   );
+
+  const adminName = [admin.firstName, admin.lastName].filter(Boolean).join(" ") || admin.email || "Admin";
+  const targetName = `${targetUser.firstName ?? ""} ${targetUser.lastName ?? ""}`.trim() || targetUser.email;
+  await logAudit(db, {
+    action: "member_approved",
+    actorId: admin.id,
+    actorName: adminName,
+    targetType: "user",
+    targetId: id,
+    details: `Approved ${targetName}`,
+    previousState: { approved: false },
+  });
 
   // Send approval email to the user
   try {
@@ -72,10 +85,24 @@ export async function DELETE(
   }
 
   const db = await getDb();
+  const targetUser = await db.collection("users").findOne({ _id: new ObjectId(id) });
+
   await db.collection("users").updateOne(
     { _id: new ObjectId(id) },
     { $set: { approved: false, isActive: false, updatedAt: new Date() } }
   );
+
+  const denyAdminName = [admin.firstName, admin.lastName].filter(Boolean).join(" ") || admin.email || "Admin";
+  const denyTargetName = targetUser ? `${targetUser.firstName ?? ""} ${targetUser.lastName ?? ""}`.trim() || targetUser.email : id;
+  await logAudit(db, {
+    action: "member_denied",
+    actorId: admin.id,
+    actorName: denyAdminName,
+    targetType: "user",
+    targetId: id,
+    details: `Denied ${denyTargetName}`,
+    previousState: { approved: targetUser?.approved ?? false, isActive: targetUser?.isActive ?? true },
+  });
 
   return NextResponse.json({ success: true });
 }

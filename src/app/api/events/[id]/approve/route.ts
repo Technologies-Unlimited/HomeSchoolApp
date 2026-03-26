@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
 import { isAdmin } from "@/lib/roles";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(
   request: Request,
@@ -19,6 +20,8 @@ export async function POST(
   }
 
   const db = await getDb();
+  const event = await db.collection("events").findOne({ _id: new ObjectId(id) });
+
   await db.collection("events").updateOne(
     { _id: new ObjectId(id) },
     {
@@ -30,6 +33,17 @@ export async function POST(
       },
     }
   );
+
+  const actorName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Admin";
+  await logAudit(db, {
+    action: "event_approved",
+    actorId: user.id,
+    actorName,
+    targetType: "event",
+    targetId: id,
+    details: `Approved event "${event?.title ?? id}"`,
+    previousState: { status: event?.status },
+  });
 
   return NextResponse.json({ success: true });
 }

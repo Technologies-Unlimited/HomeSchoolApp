@@ -90,6 +90,18 @@ export async function PATCH(
     { $set: update }
   );
 
+  const { logAudit } = await import("@/lib/audit");
+  const actorName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Admin";
+  await logAudit(db, {
+    action: "announcement_updated",
+    actorId: user.id,
+    actorName,
+    targetType: "announcement",
+    targetId: id,
+    details: `Updated announcement "${existing.title}"`,
+    previousState: { title: existing.title, content: existing.content, priority: existing.priority, visibility: existing.visibility, pinned: existing.pinned },
+  });
+
   const announcement = await db.collection("announcements").findOne({
     _id: new ObjectId(id),
   });
@@ -129,6 +141,18 @@ export async function DELETE(
     { _id: new ObjectId(id) },
     { $set: { isDeleted: true, updatedAt: new Date() } }
   );
+
+  const { logAudit } = await import("@/lib/audit");
+  const actorName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Admin";
+  await logAudit(db, {
+    action: "announcement_deleted",
+    actorId: user.id,
+    actorName,
+    targetType: "announcement",
+    targetId: id,
+    details: `Deleted announcement "${existing.title}"`,
+    previousState: { title: existing.title, content: existing.content, isDeleted: false },
+  });
 
   return NextResponse.json({ success: true });
 }
