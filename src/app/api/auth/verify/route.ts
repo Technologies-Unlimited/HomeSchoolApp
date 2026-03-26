@@ -14,6 +14,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid or expired verification link." }, { status: 400 });
   }
 
+  if (user.verificationTokenExpiry && new Date() > new Date(user.verificationTokenExpiry)) {
+    return NextResponse.json({ error: "Verification link has expired. Please request a new one." }, { status: 400 });
+  }
+
   await db.collection("users").updateOne(
     { _id: user._id },
     { $set: { emailVerified: true, verificationToken: null, updatedAt: new Date() } }

@@ -11,12 +11,10 @@ function generateToken(): string {
 }
 
 export async function POST(request: Request) {
-  console.log("[REGISTER] POST /api/auth/register — request received");
   try {
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-      console.warn("[REGISTER] Validation failed:", parsed.error.flatten());
       return NextResponse.json({ error: "Invalid input." }, { status: 400 });
     }
 
@@ -55,12 +53,12 @@ export async function POST(request: Request) {
       emailVerified: false,
       approved: false,
       verificationToken,
+      verificationTokenExpiry: new Date(now.getTime() + 48 * 60 * 60 * 1000),
       createdAt: now,
       updatedAt: now,
     });
 
     const userId = result.insertedId;
-    console.log("[REGISTER] User inserted — id:", userId.toString());
 
     // Create family with the child
     let linkedToExistingFamily = false;
@@ -88,7 +86,6 @@ export async function POST(request: Request) {
             createdAt: now,
           });
           linkedToExistingFamily = true;
-          console.log("[REGISTER] Family link invite sent to spouse:", spouseEmail);
         }
       }
     }
@@ -113,7 +110,6 @@ export async function POST(request: Request) {
         createdAt: now,
         updatedAt: now,
       });
-      console.log("[REGISTER] Family created with child:", childFirstName, childLastName);
     }
 
     // Send verification email
@@ -133,7 +129,6 @@ export async function POST(request: Request) {
           </div>
         `,
       });
-      console.log("[REGISTER] Verification email sent to:", email);
     } catch (emailError) {
       console.error("[REGISTER] Failed to send verification email:", emailError);
     }
@@ -155,7 +150,6 @@ export async function POST(request: Request) {
           `,
         });
       }
-      console.log("[REGISTER] Admin notification sent to", admins.length, "admins");
     } catch (adminEmailError) {
       console.error("[REGISTER] Failed to notify admins:", adminEmailError);
     }
