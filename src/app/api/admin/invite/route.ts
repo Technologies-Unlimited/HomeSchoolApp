@@ -1,0 +1,128 @@
+import { NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/session";
+import { isAdmin } from "@/lib/roles";
+import { sendNotificationEmail } from "@/lib/notifications";
+import { headers } from "next/headers";
+
+export async function POST(request: Request) {
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isAdmin(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await request.json();
+  const { email, role, message } = body;
+
+  if (!email || typeof email !== "string" || !email.includes("@")) {
+    return NextResponse.json({ error: "Valid email is required." }, { status: 400 });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const inviteRole = role === "admin" ? "admin" : "user";
+
+  // Check if already registered
+  const db = await getDb();
+  const existing = await db.collection("users").findOne({ email: normalizedEmail });
+  if (existing) {
+    return NextResponse.json({ error: "A user with this email already exists." }, { status: 409 });
+  }
+
+  // Check for duplicate pending invite
+  const existingInvite = await db.collection("invites").findOne({
+    email: normalizedEmail,
+    status: "pending",
+  });
+  if (existingInvite) {
+    return NextResponse.json({ error: "An invite has already been sent to this email." }, { status: 409 });
+  }
+
+  // Build the base URL from the request
+  const headerList = await headers();
+  const host = headerList.get("host") ?? "localhost:3000";
+  const protocol = headerList.get("x-forwarded-proto") ?? "http";
+  const baseUrl = `${protocol}://${host}`;
+
+  // Store the invite
+  const now = new Date();
+  await db.collection("invites").insertOne({
+    email: normalizedEmail,
+    role: inviteRole,
+    message: typeof message === "string" ? message.trim() : "",
+    invitedBy: user.id,
+    invitedByName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Admin",
+    status: "pending",
+    createdAt: now,
+  });
+
+  // Build the invite email
+  const inviterName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "An administrator";
+  const registerUrl = `${baseUrl}/register?invite=${encodeURIComponent(normalizedEmail)}`;
+  const personalMessage = message?.trim()
+    ? `<p style="margin:16px 0;padding:12px 16px;background:#f8fafc;border-left:3px solid #cbd5e1;color:#475569;font-size:14px;border-radius:4px;">"${message.trim()}"</p>`
+    : "";
+
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;">
+      <h2 style="font-size:20px;font-weight:600;margin-bottom:8px;">You're invited to Home School Group</h2>
+      <p style="font-size:14px;color:#475569;margin-bottom:16px;">
+        ${inviterName} has invited you to join the Home School Group community${inviteRole === "admin" ? " as an administrator" : ""}.
+      </p>
+      ${personalMessage}
+      <p style="font-size:14px;color:#475569;margin-bottom:24px;">
+        Click the button below to create your account and get started.
+      </p>
+      <a href="${registerUrl}" style="display:inline-block;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;">
+        Create your account
+      </a>
+      <p style="font-size:12px;color:#94a3b8;margin-top:24px;">
+        If you weren't expecting this invite you can safely ignore this email.
+      </p>
+    </div>
+  `;
+
+  try {
+    await sendNotificationEmail({
+      to: normalizedEmail,
+      subject: `${inviterName} invited you to Home School Group`,
+      html,
+    });
+  } catch (err) {
+    console.error("[INVITE] Failed to send email:", err);
+    return NextResponse.json({ error: "Failed to send invite email." }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}
+
+export async function GET(request: Request) {
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isAdmin(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const db = await getDb();
+  const invites = await db
+    .collection("invites")
+    .find({})
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .toArray();
+
+  return NextResponse.json({
+    invites: invites.map((invite) => ({
+      id: invite._id.toString(),
+      email: invite.email,
+      role: invite.role,
+      status: invite.status,
+      invitedByName: invite.invitedByName,
+      createdAt: invite.createdAt,
+    })),
+  });
+}

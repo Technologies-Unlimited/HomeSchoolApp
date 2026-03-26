@@ -14,7 +14,7 @@ const priorityStyles: Record<string, string> = { normal: "bg-slate-100 text-slat
 
 export default function AdminPage() {
   const { user, loading } = useCurrentUser();
-  const [tab, setTab] = useState<"overview" | "users" | "announcements">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "announcements" | "invites">("overview");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -30,10 +30,15 @@ export default function AdminPage() {
   const [usersLoaded, setUsersLoaded] = useState(false);
 
   // Announcements state
-  const [announcements, setAnnouncements] = useState<{ id: string; title: string; priority: string; pinned: boolean; publishAt?: string; createdAt: string }[]>([]);
-  const [announcementForm, setAnnouncementForm] = useState({ title: "", content: "", priority: "normal" as string, pinned: false, publishAt: "" });
+  const [announcements, setAnnouncements] = useState<{ id: string; title: string; priority: string; visibility?: string; pinned: boolean; publishAt?: string; createdAt: string }[]>([]);
+  const [announcementForm, setAnnouncementForm] = useState({ title: "", content: "", priority: "normal" as string, visibility: "members" as string, pinned: false, publishAt: "" });
   const [announcementSaving, setAnnouncementSaving] = useState(false);
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+
+  // Invites state
+  const [invites, setInvites] = useState<{ id: string; email: string; role: string; status: string; invitedByName: string; createdAt: string }[]>([]);
+  const [inviteForm, setInviteForm] = useState({ email: "", role: "user" as string, message: "" });
+  const [inviteSending, setInviteSending] = useState(false);
 
   const isAdminUser = user?.role === "admin" || user?.role === "super_admin";
 
@@ -57,9 +62,26 @@ export default function AdminPage() {
     fetch("/api/announcements?limit=50").then((r) => r.ok ? r.json() : { announcements: [] }).then((d) => setAnnouncements(d?.announcements ?? [])).catch(() => {});
   }
 
+  function loadInvites() {
+    fetch("/api/admin/invite").then((r) => r.ok ? r.json() : { invites: [] }).then((d) => setInvites(d?.invites ?? [])).catch(() => {});
+  }
+
+  async function handleSendInvite() {
+    if (!inviteForm.email.trim() || !inviteForm.email.includes("@")) { setError("Valid email required."); return; }
+    setInviteSending(true); setError(null);
+    const r = await fetch("/api/admin/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(inviteForm) });
+    setInviteSending(false);
+    if (r.ok) {
+      setInviteForm({ email: "", role: "user", message: "" });
+      showMsg("Invite sent!");
+      loadInvites();
+    } else { const d = await r.json().catch(() => ({})); setError(d.error || "Failed to send invite."); }
+  }
+
   useEffect(() => { if (!user || !isAdminUser) return; loadOverview(); }, [user, isAdminUser, loadOverview]);
   useEffect(() => { if (tab === "users" && !usersLoaded) loadUsers(); }, [tab, usersLoaded]);
   useEffect(() => { if (tab === "announcements") loadAnnouncements(); }, [tab]);
+  useEffect(() => { if (tab === "invites") loadInvites(); }, [tab]);
 
   // Event actions
   async function handleApproveEvent(eventId: string) {
@@ -118,7 +140,7 @@ export default function AdminPage() {
     }) });
     setAnnouncementSaving(false);
     if (r.ok) {
-      setAnnouncementForm({ title: "", content: "", priority: "normal", pinned: false, publishAt: "" });
+      setAnnouncementForm({ title: "", content: "", priority: "normal", visibility: "members", pinned: false, publishAt: "" });
       setEditingAnnouncementId(null);
       showMsg(editingAnnouncementId ? "Updated." : "Published.");
       loadAnnouncements();
@@ -130,6 +152,7 @@ export default function AdminPage() {
     if (r.ok) loadAnnouncements();
   }
 
+
   if (loading) return <p className="text-sm text-slate-500">Loading...</p>;
   if (!user || !isAdminUser) return <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h1 className="text-xl font-semibold text-slate-900">Admin access required</h1></section>;
 
@@ -140,7 +163,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-        {(["overview", "users", "announcements"] as const).map((tabName) => (
+        {(["overview", "users", "announcements", "invites"] as const).map((tabName) => (
           <button key={tabName} onClick={() => setTab(tabName)} className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold capitalize transition ${tab === tabName ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
             {tabName}
           </button>
@@ -244,6 +267,17 @@ export default function AdminPage() {
                     ))}
                   </div>
                 </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium text-slate-500">Visibility</p>
+                  <div className="flex gap-1">
+                    <button type="button" onClick={() => setAnnouncementForm({ ...announcementForm, visibility: "public" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${announcementForm.visibility === "public" ? "bg-green-100 text-green-800" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>
+                      Public
+                    </button>
+                    <button type="button" onClick={() => setAnnouncementForm({ ...announcementForm, visibility: "members" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${announcementForm.visibility === "members" ? "bg-blue-100 text-blue-800" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>
+                      Members only
+                    </button>
+                  </div>
+                </div>
                 <label className="flex items-center gap-2 text-sm text-slate-600">
                   <input type="checkbox" checked={announcementForm.pinned} onChange={(e) => setAnnouncementForm({ ...announcementForm, pinned: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
                   Pin to top
@@ -257,7 +291,7 @@ export default function AdminPage() {
                 <button onClick={handleSaveAnnouncement} disabled={announcementSaving} className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
                   {announcementSaving ? "Saving..." : editingAnnouncementId ? "Update" : announcementForm.publishAt ? "Schedule" : "Publish now"}
                 </button>
-                {editingAnnouncementId && <button onClick={() => { setEditingAnnouncementId(null); setAnnouncementForm({ title: "", content: "", priority: "normal", pinned: false, publishAt: "" }); }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>}
+                {editingAnnouncementId && <button onClick={() => { setEditingAnnouncementId(null); setAnnouncementForm({ title: "", content: "", priority: "normal", visibility: "members", pinned: false, publishAt: "" }); }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>}
               </div>
             </div>
           </div>
@@ -269,12 +303,57 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${priorityStyles[a.priority] ?? priorityStyles.normal}`}>{a.priority}</span>
                   <p className="text-sm font-medium text-slate-800">{a.title}</p>
+                  {a.visibility === "public" ? <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700">Public</span> : <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Members</span>}
                   {a.pinned && <span className="text-[10px] text-slate-400">pinned</span>}
                   {a.publishAt && new Date(a.publishAt) > new Date() && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Scheduled</span>}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingAnnouncementId(a.id); fetch(`/api/announcements/${a.id}`).then(r => r.json()).then(d => { const ann = d.announcement; setAnnouncementForm({ title: ann.title, content: ann.content, priority: ann.priority, pinned: ann.pinned, publishAt: ann.publishAt ? new Date(ann.publishAt).toISOString().slice(0, 16) : "" }); }); }} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Edit</button>
+                  <button onClick={() => { setEditingAnnouncementId(a.id); fetch(`/api/announcements/${a.id}`).then(r => r.json()).then(d => { const ann = d.announcement; setAnnouncementForm({ title: ann.title, content: ann.content, priority: ann.priority, visibility: ann.visibility || "members", pinned: ann.pinned, publishAt: ann.publishAt ? new Date(ann.publishAt).toISOString().slice(0, 16) : "" }); }); }} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Edit</button>
                   <button onClick={() => handleDeleteAnnouncement(a.id)} className="text-xs font-semibold text-red-500 hover:text-red-700">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* ─── INVITES TAB ─── */}
+      {tab === "invites" && (
+        <div className="flex flex-col gap-6">
+          {/* Send invite form */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-900 mb-4">Send an invite</h2>
+            <div className="grid gap-3">
+              <input type="email" placeholder="Email address" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} className="h-10 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
+              <div>
+                <p className="mb-1 text-xs font-medium text-slate-500">Invite as</p>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => setInviteForm({ ...inviteForm, role: "user" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${inviteForm.role === "user" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>
+                    Member
+                  </button>
+                  <button type="button" onClick={() => setInviteForm({ ...inviteForm, role: "admin" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${inviteForm.role === "admin" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>
+                    Admin
+                  </button>
+                </div>
+              </div>
+              <textarea placeholder="Personal message (optional)" rows={2} value={inviteForm.message} onChange={(e) => setInviteForm({ ...inviteForm, message: e.target.value })} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500" />
+              <button onClick={handleSendInvite} disabled={inviteSending} className="w-fit rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
+                {inviteSending ? "Sending..." : "Send invite"}
+              </button>
+            </div>
+          </div>
+
+          {/* Sent invites list */}
+          <div className="grid gap-3">
+            <h2 className="text-sm font-semibold text-slate-900">Sent invites</h2>
+            {invites.length === 0 ? <p className="text-sm text-slate-500">No invites sent yet.</p> : invites.map((invite) => (
+              <div key={invite.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-slate-800">{invite.email}</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${invite.role === "admin" ? "bg-purple-50 text-purple-700" : "bg-slate-100 text-slate-600"}`}>{invite.role === "admin" ? "Admin" : "Member"}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${invite.status === "pending" ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>{invite.status}</span>
+                </div>
+                <div className="text-xs text-slate-400">
+                  {invite.invitedByName} — {new Date(invite.createdAt).toLocaleDateString()}
                 </div>
               </div>
             ))}
