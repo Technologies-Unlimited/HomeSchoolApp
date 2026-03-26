@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { firstName, lastName, dateOfBirth, grade, allergies, medicalNotes } =
+  const { firstName, lastName, dateOfBirth, grade, dietaryNeeds, allergies, medicalNotes } =
     body;
 
   if (!firstName || typeof firstName !== "string" || !firstName.trim()) {
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     lastName: lastName.trim(),
     dateOfBirth: new Date(dateOfBirth).toISOString(),
     grade: grade && typeof grade === "string" ? grade.trim() : undefined,
+    dietaryNeeds: Array.isArray(dietaryNeeds) ? dietaryNeeds : undefined,
     allergies:
       allergies && typeof allergies === "string" ? allergies.trim() : undefined,
     medicalNotes:

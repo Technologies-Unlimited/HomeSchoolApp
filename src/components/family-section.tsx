@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
+import { DIETARY_OPTIONS } from "@/lib/dietary-options";
 
 interface ChildProfile {
   _id: string;
@@ -10,6 +11,7 @@ interface ChildProfile {
   dateOfBirth: string;
   grade?: string;
   allergies?: string;
+  dietaryNeeds?: string[];
   medicalNotes?: string;
   notes?: string;
 }
@@ -34,12 +36,13 @@ interface ChildFormData {
   lastName: string;
   dateOfBirth: string;
   grade: string;
+  dietaryNeeds: string[];
   allergies: string;
   medicalNotes: string;
   notes: string;
 }
 
-const emptyChildForm: ChildFormData = { firstName: "", lastName: "", dateOfBirth: "", grade: "", allergies: "", medicalNotes: "", notes: "" };
+const emptyChildForm: ChildFormData = { firstName: "", lastName: "", dateOfBirth: "", grade: "", dietaryNeeds: [], allergies: "", medicalNotes: "", notes: "" };
 
 function calculateAge(dateOfBirth: string): number {
   return Math.floor((Date.now() - new Date(dateOfBirth).getTime()) / 31557600000);
@@ -61,7 +64,20 @@ function ChildForm({ form, setForm, onSave, onCancel, saving, submitLabel }: {
       <input type="text" placeholder="Last name *" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className={inputClass} />
       <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} className={inputClass} />
       <input type="text" placeholder="Grade (e.g. 3rd, K)" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} className={inputClass} />
-      <input type="text" placeholder="Allergies" value={form.allergies} onChange={(e) => setForm({ ...form, allergies: e.target.value })} className={`${inputClass} sm:col-span-2`} />
+      <div className="sm:col-span-2 space-y-2">
+        <p className="text-xs font-medium text-slate-500">Dietary needs & allergies</p>
+        <div className="flex flex-wrap gap-1.5">
+          {DIETARY_OPTIONS.map((option) => {
+            const selected = form.dietaryNeeds.includes(option.value);
+            return (
+              <button key={option.value} type="button" onClick={() => setForm({ ...form, dietaryNeeds: selected ? form.dietaryNeeds.filter((d) => d !== option.value) : [...form.dietaryNeeds, option.value] })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${selected ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-500 hover:text-slate-700"}`}>
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <input type="text" placeholder="Other allergies (e.g. shellfish, sesame)" value={form.allergies} onChange={(e) => setForm({ ...form, allergies: e.target.value })} className={`${inputClass} w-full`} />
+      </div>
       <textarea placeholder="Medical notes" value={form.medicalNotes} onChange={(e) => setForm({ ...form, medicalNotes: e.target.value })} rows={2} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 sm:col-span-2" />
       <textarea placeholder="Other notes (anything else we should know)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 sm:col-span-2" />
       <div className="flex gap-2 sm:col-span-2">
@@ -141,7 +157,7 @@ export function FamilySection() {
     if (!childForm.firstName.trim() || !childForm.lastName.trim()) { setError("First and last name are required."); return; }
     if (!childForm.dateOfBirth) { setError("Date of birth is required."); return; }
     setSavingChild(true); setError("");
-    const response = await fetch("/api/family/children", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ firstName: childForm.firstName, lastName: childForm.lastName, dateOfBirth: childForm.dateOfBirth, grade: childForm.grade || undefined, allergies: childForm.allergies || undefined, medicalNotes: childForm.medicalNotes || undefined, notes: childForm.notes || undefined }) });
+    const response = await fetch("/api/family/children", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ firstName: childForm.firstName, lastName: childForm.lastName, dateOfBirth: childForm.dateOfBirth, grade: childForm.grade || undefined, dietaryNeeds: childForm.dietaryNeeds.length > 0 ? childForm.dietaryNeeds : undefined, allergies: childForm.allergies || undefined, medicalNotes: childForm.medicalNotes || undefined, notes: childForm.notes || undefined }) });
     setSavingChild(false);
     if (response.ok) { const data = await response.json(); setFamily(data.family); setChildForm(emptyChildForm); setShowAddChild(false); }
     else { const data = await response.json().catch(() => ({})); setError(data.error || "Failed to add child."); }
@@ -150,7 +166,7 @@ export function FamilySection() {
   async function handleSaveEditChild() {
     if (!editingChildId) return;
     setSavingEditChild(true); setError("");
-    const response = await fetch(`/api/family/children/${editingChildId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ firstName: editChildForm.firstName, lastName: editChildForm.lastName, dateOfBirth: editChildForm.dateOfBirth, grade: editChildForm.grade || undefined, allergies: editChildForm.allergies || undefined, medicalNotes: editChildForm.medicalNotes || undefined, notes: editChildForm.notes || undefined }) });
+    const response = await fetch(`/api/family/children/${editingChildId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ firstName: editChildForm.firstName, lastName: editChildForm.lastName, dateOfBirth: editChildForm.dateOfBirth, grade: editChildForm.grade || undefined, dietaryNeeds: editChildForm.dietaryNeeds, allergies: editChildForm.allergies || undefined, medicalNotes: editChildForm.medicalNotes || undefined, notes: editChildForm.notes || undefined }) });
     setSavingEditChild(false);
     if (response.ok) { const data = await response.json(); setFamily(data.family); setEditingChildId(null); }
     else { const data = await response.json().catch(() => ({})); setError(data.error || "Failed to update child."); }
@@ -354,12 +370,20 @@ export function FamilySection() {
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-slate-900">{child.firstName} {child.lastName}</p>
                     <p className="text-xs text-slate-500">Age {calculateAge(child.dateOfBirth)}{child.grade ? ` \u2022 ${child.grade}` : ""}</p>
-                    {child.allergies && <p className="text-xs text-red-600">Allergies: {child.allergies}</p>}
+                    {child.dietaryNeeds && child.dietaryNeeds.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {child.dietaryNeeds.map((need: string) => {
+                          const option = DIETARY_OPTIONS.find((o) => o.value === need);
+                          return <span key={need} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">{option?.label ?? need}</span>;
+                        })}
+                      </div>
+                    )}
+                    {child.allergies && <p className="text-xs text-red-600">Other allergies: {child.allergies}</p>}
                     {child.medicalNotes && <p className="text-xs text-slate-500">Medical: {child.medicalNotes}</p>}
                     {child.notes && <p className="text-xs text-slate-500">Notes: {child.notes}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => { setEditingChildId(child._id); setEditChildForm({ firstName: child.firstName, lastName: child.lastName, dateOfBirth: child.dateOfBirth?.slice(0, 10) || "", grade: child.grade || "", allergies: child.allergies || "", medicalNotes: child.medicalNotes || "", notes: child.notes || "" }); }} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Edit</button>
+                    <button type="button" onClick={() => { setEditingChildId(child._id); setEditChildForm({ firstName: child.firstName, lastName: child.lastName, dateOfBirth: child.dateOfBirth?.slice(0, 10) || "", grade: child.grade || "", dietaryNeeds: child.dietaryNeeds ?? [], allergies: child.allergies || "", medicalNotes: child.medicalNotes || "", notes: child.notes || "" }); }} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Edit</button>
                     <button type="button" onClick={() => handleDeleteChild(child._id)} className="text-xs font-semibold text-red-500 hover:text-red-700">Remove</button>
                   </div>
                 </div>

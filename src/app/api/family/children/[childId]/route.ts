@@ -56,6 +56,9 @@ export async function PATCH(
         ? body.grade.trim()
         : undefined;
   }
+  if (body.dietaryNeeds !== undefined) {
+    setFields["children.$.dietaryNeeds"] = Array.isArray(body.dietaryNeeds) ? body.dietaryNeeds : [];
+  }
   if (body.allergies !== undefined) {
     setFields["children.$.allergies"] =
       body.allergies && typeof body.allergies === "string"
