@@ -24,6 +24,9 @@ function getTransporter() {
       user: smtpUser,
       pass: smtpPass,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 
   return cachedTransporter;
