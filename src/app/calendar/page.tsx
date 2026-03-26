@@ -57,6 +57,7 @@ export default function CalendarPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Calendar</h1>
       </PageGuide>
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1 w-fit">
         <button onClick={() => setTab("upcoming")} data-active={tab === "upcoming"} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "upcoming" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
           Upcoming ({upcoming.length})
@@ -64,6 +65,8 @@ export default function CalendarPage() {
         <button onClick={() => setTab("past")} data-active={tab === "past"} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === "past" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
           Past ({past.length})
         </button>
+      </div>
+        <a href="/api/events/ical" className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100">Export calendar (.ics)</a>
       </div>
 
       {loading ? (

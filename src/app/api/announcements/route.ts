@@ -89,6 +89,38 @@ export async function POST(request: Request) {
 
   const result = await db.collection("announcements").insertOne(announcement);
 
+  // Audit log
+  const { logAudit } = await import("@/lib/audit");
+  await logAudit(db, {
+    action: "announcement_created",
+    actorId: user.id,
+    actorName: announcement.authorName,
+    targetType: "announcement",
+    targetId: result.insertedId.toString(),
+    details: `Created announcement "${title.trim()}"`,
+  });
+
+  // Optionally email all approved members
+  if (body.emailToMembers === true && !publishAt) {
+    const { sendNotificationEmail } = await import("@/lib/notifications");
+    const { buildAnnouncementEmailHtml } = await import("@/lib/announcement-email");
+    const members = await db.collection("users")
+      .find({ approved: true, isActive: { $ne: false } }, { projection: { email: 1 } })
+      .toArray();
+
+    const html = buildAnnouncementEmailHtml({
+      title: title.trim(),
+      content: content.trim(),
+      authorName: announcement.authorName,
+      priority: resolvedPriority,
+    });
+
+    const sendPromises = members.map((m) =>
+      sendNotificationEmail({ to: m.email, subject: `${title.trim()} — Home School Group`, html }).catch(() => {})
+    );
+    Promise.allSettled(sendPromises).catch(() => {});
+  }
+
   return NextResponse.json({
     announcement: { ...announcement, id: result.insertedId.toString() },
   });
