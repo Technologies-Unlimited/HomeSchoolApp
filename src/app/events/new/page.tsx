@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/lib/client";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { EVENT_CATEGORIES } from "@/lib/validation";
 import { LocationPicker } from "@/components/location-picker";
+import { DIETARY_OPTIONS } from "@/lib/dietary-options";
 
 const categoryLabels: Record<string, string> = {
   "field-trip": "Field Trip",
@@ -39,6 +40,7 @@ function NewEventForm() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [attachments, setAttachments] = useState<{ name: string; url: string }[]>([]);
   const [location, setLocation] = useState({ name: "", address: "" });
+  const [dietaryAccommodations, setDietaryAccommodations] = useState<string[]>([]);
 
   const isAdminUser = user?.role === "admin" || user?.role === "super_admin";
 
@@ -71,7 +73,8 @@ function NewEventForm() {
         if (event.maxAttendees) setValue("maxAttendees", String(event.maxAttendees));
         if (event.location) setLocation({ name: event.location.name ?? "", address: event.location.address ?? "" });
         if (event.attachments?.length) setAttachments(event.attachments);
-        if (event.fee || event.ageRange || event.maxAttendees || event.attachments?.length) setShowAdvanced(true);
+        if (event.dietaryAccommodations?.length) setDietaryAccommodations(event.dietaryAccommodations);
+        if (event.fee || event.ageRange || event.maxAttendees || event.attachments?.length || event.dietaryAccommodations?.length) setShowAdvanced(true);
       })
       .catch(() => {});
   }, [duplicateId, user]);
@@ -135,6 +138,7 @@ function NewEventForm() {
           endAfterCount: recurringCount > 0 ? recurringCount : undefined,
         } : undefined,
         attachments: validAttachments.length > 0 ? validAttachments : undefined,
+        dietaryAccommodations: dietaryAccommodations.length > 0 ? dietaryAccommodations : undefined,
       }),
     });
 
@@ -168,9 +172,11 @@ function NewEventForm() {
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <Breadcrumb items={[{ label: "Events", href: "/events" }, { label: "Create event" }]} />
-      <div className="space-y-2">
+      <div className="flex items-center gap-4">
+        <button onClick={() => router.back()} className="shrink-0 flex items-center justify-center h-9 w-9 rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        </button>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Create event</h1>
-        <p className="text-sm text-slate-600">Draft your event details and submit for approval when ready.</p>
       </div>
 
       <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" onSubmit={handleSubmit}>
@@ -304,6 +310,20 @@ function NewEventForm() {
                 </div>
               ))}
               <button type="button" onClick={addAttachment} className="text-sm text-slate-500 transition hover:text-slate-700">+ Add attachment link</button>
+            </div>
+
+            {/* Dietary accommodations */}
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Dietary accommodations</p>
+            <p className="text-xs text-slate-500 -mt-2">Select which dietary needs this event can accommodate. Families with children who have these needs will know this event is safe for them.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {DIETARY_OPTIONS.map((option) => {
+                const selected = dietaryAccommodations.includes(option.value);
+                return (
+                  <button key={option.value} type="button" onClick={() => setDietaryAccommodations(selected ? dietaryAccommodations.filter((d) => d !== option.value) : [...dietaryAccommodations, option.value])} className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${selected ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-500 hover:text-slate-700"}`}>
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

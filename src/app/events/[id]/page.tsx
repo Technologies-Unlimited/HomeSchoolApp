@@ -10,6 +10,7 @@ import { FormResponses } from "@/components/form-responses";
 import type { FormField, FormData } from "@/lib/form-types";
 import { VolunteerSlots } from "@/components/volunteer-slots";
 import { CarpoolBoard } from "@/components/carpool-board";
+import { DIETARY_OPTIONS } from "@/lib/dietary-options";
 
 interface EventDetailProps {
   params: Promise<{ id: string }>;
@@ -30,6 +31,7 @@ interface EventDetail {
   maxAttendees?: number;
   recurring?: { frequency: string; endAfterCount?: number };
   attachments?: { name: string; url: string }[];
+  dietaryAccommodations?: string[];
 }
 
 const categoryLabels: Record<string, string> = {
@@ -285,6 +287,15 @@ export default function EventDetailPage({ params: paramsPromise }: EventDetailPr
             </span>
           )}
         </div>
+        {event.dietaryAccommodations && event.dietaryAccommodations.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium text-slate-500">Accommodates:</span>
+            {event.dietaryAccommodations.map((diet: string) => {
+              const option = DIETARY_OPTIONS.find((o) => o.value === diet);
+              return <span key={diet} className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700">{option?.label ?? diet}</span>;
+            })}
+          </div>
+        )}
         {event.attachments && event.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {event.attachments.map((attachment, index) => (
