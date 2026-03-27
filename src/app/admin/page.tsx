@@ -166,6 +166,15 @@ export default function AdminPage() {
     if (r.ok) { setUsers((p) => p.map((u) => u.id === userId ? { ...u, role: newRole } : u)); showMsg("Role updated."); } else setError("Failed.");
   }
 
+  // Send verification email
+  async function handleSendVerification(userId: string) {
+    setActionLoading(userId); setError(null);
+    const r = await fetch("/api/admin/send-verification", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }) });
+    setActionLoading(null);
+    if (r.ok) showMsg("Verification email sent!");
+    else { const d = await r.json().catch(() => ({})); setError(d.error || "Failed to send."); }
+  }
+
   // Member deactivation
   async function handleToggleActive(userId: string, currentlyActive: boolean) {
     if (!confirm(currentlyActive ? "Deactivate this member? They will lose access." : "Reactivate this member?")) return;
@@ -326,8 +335,10 @@ export default function AdminPage() {
             <tbody>
               {(() => {
                 const showInvited = userStatusFilter === "all" || userStatusFilter === "invited";
+                const registeredEmails = new Set(users.map((u) => u.email.toLowerCase()));
                 const pendingInvites = showInvited ? invites.filter((inv) => {
                   if (inv.status !== "pending") return false;
+                  if (registeredEmails.has(inv.email.toLowerCase())) return false;
                   const searchLower = userSearch.toLowerCase();
                   if (searchLower && !inv.email.toLowerCase().includes(searchLower)) return false;
                   if (userRoleFilter !== "all" && inv.role !== userRoleFilter) return false;
@@ -375,11 +386,16 @@ export default function AdminPage() {
                     </div>
                   </td>
                   <td className="px-4 py-2">
-                    {userItem.id !== user?.id && (
-                      <button onClick={() => handleToggleActive(userItem.id, userItem.isActive !== false)} disabled={actionLoading === userItem.id} className={`text-xs font-semibold ${userItem.isActive === false ? "text-green-600 hover:text-green-700" : "text-red-500 hover:text-red-700"} disabled:opacity-60`}>
-                        {userItem.isActive === false ? "Reactivate" : "Deactivate"}
-                      </button>
-                    )}
+                    <div className="flex gap-2">
+                      {!userItem.emailVerified && (
+                        <button onClick={() => handleSendVerification(userItem.id)} disabled={actionLoading === userItem.id} className="text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-60">{actionLoading === userItem.id ? "..." : "Send verify"}</button>
+                      )}
+                      {userItem.id !== user?.id && (
+                        <button onClick={() => handleToggleActive(userItem.id, userItem.isActive !== false)} disabled={actionLoading === userItem.id} className={`text-xs font-semibold ${userItem.isActive === false ? "text-green-600 hover:text-green-700" : "text-red-500 hover:text-red-700"} disabled:opacity-60`}>
+                          {userItem.isActive === false ? "Reactivate" : "Deactivate"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}</>);
