@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/lib/client";
 
 export default function PendingApprovalPage() {
   const { user, loading } = useCurrentUser();
+  const router = useRouter();
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+
+  // Redirect approved users to home
+  useEffect(() => {
+    if (!loading && user?.emailVerified && user?.approved) {
+      router.replace("/");
+    }
+  }, [loading, user, router]);
 
   async function handleResend() {
     setResending(true);
