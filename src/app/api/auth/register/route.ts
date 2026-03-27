@@ -42,21 +42,35 @@ export async function POST(request: Request) {
     const verificationToken = generateToken();
     const now = new Date();
 
+    // Check if this user was invited — inherit role and auto-approve
+    const invite = await db.collection("invites").findOne({ email, status: "pending" });
+    const assignedRole = invite?.role === "admin" ? "admin" : "user";
+    const autoApproved = !!invite;
+
     const result = await db.collection("users").insertOne({
       email,
       phone,
       passwordHash,
       firstName,
       lastName,
-      role: "user",
+      role: assignedRole,
       isActive: true,
       emailVerified: false,
-      approved: false,
+      approved: autoApproved,
       verificationToken,
       verificationTokenExpiry: new Date(now.getTime() + 48 * 60 * 60 * 1000),
       createdAt: now,
       updatedAt: now,
+      ...(autoApproved ? { approvedAt: now, approvedBy: invite.invitedBy } : {}),
     });
+
+    // Mark invite as accepted
+    if (invite) {
+      await db.collection("invites").updateOne(
+        { _id: invite._id },
+        { $set: { status: "accepted", acceptedAt: now } }
+      );
+    }
 
     const userId = result.insertedId;
 
@@ -154,7 +168,7 @@ export async function POST(request: Request) {
     }
 
     // Sign in the user (limited access until verified + approved)
-    const token = signToken({ userId: userId.toString(), role: "user" });
+    const token = signToken({ userId: userId.toString(), role: assignedRole });
     await setAuthCookie(token);
 
     return NextResponse.json({
@@ -163,9 +177,9 @@ export async function POST(request: Request) {
         email,
         firstName,
         lastName,
-        role: "user",
+        role: assignedRole,
         emailVerified: false,
-        approved: false,
+        approved: autoApproved,
       },
     });
   } catch (error) {
