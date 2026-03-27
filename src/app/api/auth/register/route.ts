@@ -117,17 +117,11 @@ export async function POST(request: Request) {
     const verifyUrl = `${getBaseUrl()}/verify/${verificationToken}`;
 
     try {
+      const { buildVerificationEmailHtml } = await import("@/lib/verification-email");
       await sendNotificationEmail({
         to: email,
         subject: "Verify your email — Home School Group",
-        html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
-            <h2 style="margin:0 0 16px;color:#0f172a;font-size:20px;">Welcome to Home School Group!</h2>
-            <p style="margin:0 0 24px;color:#475569;font-size:14px;">Hi ${firstName}, please verify your email address to get started.</p>
-            <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Verify my email</a>
-            <p style="margin:24px 0 0;color:#94a3b8;font-size:12px;">If you didn't create this account, you can ignore this email.</p>
-          </div>
-        `,
+        html: buildVerificationEmailHtml({ firstName, verifyUrl }),
       });
     } catch {
       // Email failed but account was created — user can resend from pending-approval page
