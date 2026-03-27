@@ -112,10 +112,19 @@ export async function proxy(request: NextRequest) {
 
   // Public pages — always accessible
   const isPublic = publicPaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
-  if (isPublic) return NextResponse.next();
 
   // Check auth status
   const status = await getUserStatus(request);
+
+  // Signed-in users shouldn't see login/register — redirect them
+  if (status && (pathname === "/login" || pathname === "/register")) {
+    if (!status.verified || !status.approved) {
+      return NextResponse.redirect(new URL("/pending-approval", request.url));
+    }
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  if (isPublic) return NextResponse.next();
 
   // Not logged in — redirect to login
   if (!status) {
@@ -125,9 +134,8 @@ export async function proxy(request: NextRequest) {
   // Admins always have full access (they're pre-approved)
   if (status.isAdmin) return NextResponse.next();
 
-  // Needs verification or approval — redirect to pending page
-  const needsApproval = approvedRequiredPaths.some((path) => pathname.startsWith(path));
-  if (needsApproval && (!status.verified || !status.approved)) {
+  // Needs verification or approval — redirect to pending page for ALL protected pages
+  if (!status.verified || !status.approved) {
     return NextResponse.redirect(new URL("/pending-approval", request.url));
   }
 
