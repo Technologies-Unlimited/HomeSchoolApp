@@ -1,3 +1,5 @@
+import { escapeHtml } from "./email-template";
+
 export function buildInviteEmailHtml({
   inviterName,
   registerUrl,
@@ -9,14 +11,15 @@ export function buildInviteEmailHtml({
   role: string;
   personalMessage?: string;
 }) {
+  const safeInviter = escapeHtml(inviterName);
   const isAdminInvite = role === "admin";
   const messagBlock = personalMessage?.trim()
     ? `
       <tr><td style="padding:0 40px 24px;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;">
           <tr><td style="padding:16px 20px;">
-            <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#94a3b8;">A note from ${inviterName}</p>
-            <p style="margin:0;font-size:14px;line-height:1.6;color:#475569;font-style:italic;">"${personalMessage.trim()}"</p>
+            <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#94a3b8;">A note from ${safeInviter}</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#475569;font-style:italic;">"${escapeHtml(personalMessage.trim())}"</p>
           </td></tr>
         </table>
       </td></tr>`
@@ -45,7 +48,7 @@ export function buildInviteEmailHtml({
         <tr><td style="padding:32px 40px 8px;">
           <p style="margin:0 0 6px;font-size:14px;color:#94a3b8;">Hey there,</p>
           <p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:#1e293b;">
-            <strong>${inviterName}</strong> thinks you'd be a great fit for our homeschool community${isAdminInvite ? " and wants you to help run things as an <strong>administrator</strong>" : ""}. We'd love to have you join us!
+            <strong>${safeInviter}</strong> thinks you'd be a great fit for our homeschool community${isAdminInvite ? " and wants you to help run things as an <strong>administrator</strong>" : ""}. We'd love to have you join us!
           </p>
         </td></tr>
 
@@ -85,7 +88,7 @@ export function buildInviteEmailHtml({
         <!-- Footer -->
         <tr><td style="background:#f8fafc;padding:24px 40px;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.5;">
-            This invite was sent by ${inviterName}.<br>
+            This invite was sent by ${safeInviter}.<br>
             If you weren't expecting this, you can safely ignore it.
           </p>
         </td></tr>

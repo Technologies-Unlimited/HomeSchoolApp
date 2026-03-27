@@ -1,7 +1,7 @@
 import { getDb } from "./db";
 import { sendNotificationEmail } from "./notifications";
 import { ObjectId } from "mongodb";
-import { brandedEmail, infoCard } from "./email-template";
+import { brandedEmail, infoCard, escapeHtml } from "./email-template";
 
 export async function notifyAttendeesOfEventChange(
   eventId: ObjectId,
@@ -32,8 +32,9 @@ export async function notifyAttendeesOfEventChange(
   const icon = changeType === "cancelled" ? "&#10060;" : "&#128221;";
   const headline = changeType === "cancelled" ? "Event Cancelled" : "Event Updated";
 
+  const safeTitle = escapeHtml(eventTitle);
   const detailBlock = changeDetails
-    ? infoCard(`<p style="margin:0;font-size:14px;color:#475569;">${changeDetails}</p>`)
+    ? infoCard(`<p style="margin:0;font-size:14px;color:#475569;">${escapeHtml(changeDetails)}</p>`)
     : "";
 
   const html = brandedEmail({
@@ -43,8 +44,8 @@ export async function notifyAttendeesOfEventChange(
     body: `
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1e293b;">
         ${changeType === "cancelled"
-          ? `The event <strong>${eventTitle}</strong> that you RSVP'd to has been <span style="color:#dc2626;font-weight:600;">cancelled</span>.`
-          : `The event <strong>${eventTitle}</strong> that you RSVP'd to has been updated with new details.`
+          ? `The event <strong>${safeTitle}</strong> that you RSVP'd to has been <span style="color:#dc2626;font-weight:600;">cancelled</span>.`
+          : `The event <strong>${safeTitle}</strong> that you RSVP'd to has been updated with new details.`
         }
       </p>
       ${detailBlock}

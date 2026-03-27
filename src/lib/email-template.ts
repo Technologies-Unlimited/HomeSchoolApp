@@ -1,3 +1,13 @@
+/** Escape user-provided text for safe embedding in HTML emails */
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * Shared branded email shell used by all transactional emails.
  * Pass an icon (emoji/HTML entity), headline, and body HTML.
@@ -15,6 +25,9 @@ export function brandedEmail({
   body: string;
   footerText?: string;
 }) {
+  const safeHeadline = escapeHtml(headline);
+  const safeSubtitle = subtitle ? escapeHtml(subtitle) : undefined;
+  const safeFooter = footerText ? escapeHtml(footerText) : undefined;
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -29,8 +42,8 @@ export function brandedEmail({
           <table cellpadding="0" cellspacing="0" align="center"><tr><td style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:50%;text-align:center;vertical-align:middle;font-size:24px;line-height:56px;">
             ${icon}
           </td></tr></table>
-          <h1 style="margin:16px 0 4px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${headline}</h1>
-          ${subtitle ? `<p style="margin:0;font-size:13px;color:rgba(255,255,255,0.6);">${subtitle}</p>` : ""}
+          <h1 style="margin:16px 0 4px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${safeHeadline}</h1>
+          ${safeSubtitle ? `<p style="margin:0;font-size:13px;color:rgba(255,255,255,0.6);">${safeSubtitle}</p>` : ""}
         </td></tr>
 
         <!-- Body -->
@@ -41,7 +54,7 @@ export function brandedEmail({
         <!-- Footer -->
         <tr><td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.5;">
-            ${footerText ?? "Home School Group"}
+            ${safeFooter ?? "Home School Group"}
           </p>
         </td></tr>
 

@@ -31,6 +31,14 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    // Non-published events are only visible to the creator or admins
+    if (event.status !== "published") {
+      const isOwner = event.creatorId?.toString() === user._id.toString();
+      if (!isOwner && !isAdmin(user.role)) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+    }
+
     return NextResponse.json({ event: { ...event, id: event._id.toString() } });
   } catch {
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });

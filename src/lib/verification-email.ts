@@ -1,3 +1,5 @@
+import { escapeHtml } from "./email-template";
+
 export function buildVerificationEmailHtml({
   firstName,
   verifyUrl,
@@ -5,6 +7,7 @@ export function buildVerificationEmailHtml({
   firstName: string;
   verifyUrl: string;
 }) {
+  const safeName = escapeHtml(firstName);
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -25,7 +28,7 @@ export function buildVerificationEmailHtml({
 
         <!-- Body -->
         <tr><td style="padding:32px 40px 8px;">
-          <p style="margin:0 0 6px;font-size:14px;color:#94a3b8;">Hey ${firstName},</p>
+          <p style="margin:0 0 6px;font-size:14px;color:#94a3b8;">Hey ${safeName},</p>
           <p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:#1e293b;">
             Welcome to <strong>Home School Group</strong>! To get started, please verify your email address by clicking the button below.
           </p>
