@@ -9,6 +9,7 @@ export default function PendingApprovalPage() {
   const router = useRouter();
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   // Redirect approved users to home
   useEffect(() => {
@@ -19,11 +20,15 @@ export default function PendingApprovalPage() {
 
   async function handleResend() {
     setResending(true);
+    setResendError(null);
     const response = await fetch("/api/auth/resend-verification", { method: "POST" });
     setResending(false);
     if (response.ok) {
       setResendSuccess(true);
       setTimeout(() => setResendSuccess(false), 5000);
+    } else {
+      const data = await response.json().catch(() => ({}));
+      setResendError(data.error || "Failed to send verification email. Please try again later.");
     }
   }
 
@@ -50,6 +55,7 @@ export default function PendingApprovalPage() {
           >
             {resendSuccess ? "Email sent!" : resending ? "Sending..." : "Resend verification email"}
           </button>
+          {resendError && <p className="text-sm text-red-600">{resendError}</p>}
         </>
       )}
 
