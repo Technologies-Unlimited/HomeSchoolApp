@@ -16,7 +16,8 @@ const priorityStyles: Record<string, string> = { normal: "bg-slate-100 text-slat
 
 export default function AdminPage() {
   const { user, loading } = useCurrentUser();
-  const [tab, setTab] = useState<"overview" | "users" | "announcements" | "invites" | "activity">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "announcements" | "activity">("overview");
+  const [showInviteForm, setShowInviteForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -107,9 +108,8 @@ export default function AdminPage() {
   }
 
   useEffect(() => { if (!user || !isAdminUser) return; loadOverview(); }, [user, isAdminUser, loadOverview]);
-  useEffect(() => { if (tab === "users" && !usersLoaded) loadUsers(); }, [tab, usersLoaded]);
+  useEffect(() => { if (tab === "users" && !usersLoaded) { loadUsers(); loadInvites(); } }, [tab, usersLoaded]);
   useEffect(() => { if (tab === "announcements") loadAnnouncements(); }, [tab]);
-  useEffect(() => { if (tab === "invites") loadInvites(); }, [tab]);
 
   function loadAuditLog(page = 1, filter = "all") {
     const params = new URLSearchParams({ limit: "20", page: String(page) });
@@ -218,7 +218,7 @@ export default function AdminPage() {
 
       {/* Tabs — guides are inside each tab */}
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-        {(["overview", "users", "announcements", "invites", "activity"] as const).map((tabName) => (
+        {(["overview", "users", "announcements", "activity"] as const).map((tabName) => (
           <button key={tabName} onClick={() => setTab(tabName)} data-active={tab === tabName} className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold capitalize transition ${tab === tabName ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
             {tabName}
           </button>
@@ -291,9 +291,33 @@ export default function AdminPage() {
             <option value="all">All statuses</option>
             <option value="approved">Approved</option>
             <option value="pending">Pending</option>
+            <option value="invited">Invited</option>
             <option value="deactivated">Deactivated</option>
           </select>
+          <button onClick={() => setShowInviteForm(!showInviteForm)} className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800">
+            {showInviteForm ? "Cancel" : "Invite someone"}
+          </button>
         </div>
+
+        {/* Inline invite form */}
+        {showInviteForm && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input type="email" placeholder="Email address" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} className="h-10 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500 sm:col-span-2" />
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-medium text-slate-500">Invite as:</p>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => setInviteForm({ ...inviteForm, role: "user" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${inviteForm.role === "user" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>Member</button>
+                  <button type="button" onClick={() => setInviteForm({ ...inviteForm, role: "admin" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${inviteForm.role === "admin" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>Admin</button>
+                </div>
+              </div>
+              <textarea placeholder="Personal message (optional)" rows={2} value={inviteForm.message} onChange={(e) => setInviteForm({ ...inviteForm, message: e.target.value })} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 sm:col-span-2" />
+              <button onClick={() => { handleSendInvite().then(() => setShowInviteForm(false)); }} disabled={inviteSending} className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
+                {inviteSending ? "Sending..." : "Send invite"}
+              </button>
+            </div>
+          </div>
+        )}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead><tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -301,7 +325,16 @@ export default function AdminPage() {
             </tr></thead>
             <tbody>
               {(() => {
-                const filtered = users.filter((userItem) => {
+                const showInvited = userStatusFilter === "all" || userStatusFilter === "invited";
+                const pendingInvites = showInvited ? invites.filter((inv) => {
+                  if (inv.status !== "pending") return false;
+                  const searchLower = userSearch.toLowerCase();
+                  if (searchLower && !inv.email.toLowerCase().includes(searchLower)) return false;
+                  if (userRoleFilter !== "all" && inv.role !== userRoleFilter) return false;
+                  return true;
+                }) : [];
+
+                const filtered = userStatusFilter === "invited" ? [] : users.filter((userItem) => {
                   const searchLower = userSearch.toLowerCase();
                   if (searchLower && !`${userItem.firstName} ${userItem.lastName} ${userItem.email}`.toLowerCase().includes(searchLower)) return false;
                   if (userRoleFilter !== "all" && userItem.role !== userRoleFilter) return false;
@@ -310,8 +343,23 @@ export default function AdminPage() {
                   if (userStatusFilter === "deactivated" && userItem.isActive !== false) return false;
                   return true;
                 });
-                if (filtered.length === 0) return <tr><td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">No users match your filters.</td></tr>;
-                return filtered.map((userItem) => (
+
+                if (filtered.length === 0 && pendingInvites.length === 0) return <tr><td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">No users match your filters.</td></tr>;
+
+                return (<>{pendingInvites.map((invite) => (
+                  <tr key={`inv-${invite.id}`} className="border-b border-slate-100 bg-slate-50/50">
+                    <td className="px-4 py-2 font-medium text-slate-400 italic">Pending invite</td>
+                    <td className="px-4 py-2 text-slate-600">{invite.email}</td>
+                    <td className="px-4 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${invite.role === "admin" ? "bg-purple-50 text-purple-700" : "bg-slate-100 text-slate-600"}`}>{invite.role === "admin" ? "Admin" : "Member"}</span></td>
+                    <td className="px-4 py-2"><span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">Invited</span></td>
+                    <td className="px-4 py-2">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleResendInvite(invite.id)} disabled={actionLoading === invite.id} className="text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-60">{actionLoading === invite.id ? "..." : "Resend"}</button>
+                        <button onClick={() => handleCancelInvite(invite.id)} disabled={actionLoading === invite.id} className="text-xs font-semibold text-red-500 hover:text-red-700 disabled:opacity-60">Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}{filtered.map((userItem) => (
                 <tr key={userItem.id} className="border-b border-slate-100">
                   <td className="px-4 py-2 font-medium text-slate-800">{userItem.firstName} {userItem.lastName}</td>
                   <td className="px-4 py-2 text-slate-600">{userItem.email}</td>
@@ -334,7 +382,7 @@ export default function AdminPage() {
                     )}
                   </td>
                 </tr>
-              ));
+              ))}</>);
               })()}
             </tbody>
           </table>
@@ -414,55 +462,6 @@ export default function AdminPage() {
                 <div className="flex gap-2">
                   <button onClick={() => { setEditingAnnouncementId(a.id); fetch(`/api/announcements/${a.id}`).then(r => r.json()).then(d => { const ann = d.announcement; setAnnouncementForm({ title: ann.title, content: ann.content, priority: ann.priority, visibility: ann.visibility || "members", pinned: ann.pinned, publishAt: ann.publishAt ? new Date(ann.publishAt).toISOString().slice(0, 16) : "", emailToMembers: false }); }); }} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Edit</button>
                   <button onClick={() => handleDeleteAnnouncement(a.id)} className="text-xs font-semibold text-red-500 hover:text-red-700">Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* ─── INVITES TAB ─── */}
-      {tab === "invites" && (
-        <div className="flex flex-col gap-6">
-          <PageGuide pageKey="admin_invites">
-            <h2 className="text-lg font-semibold text-slate-900">Invites</h2>
-          </PageGuide>
-          {/* Send invite form */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">Send an invite</h2>
-            <div className="grid gap-3">
-              <input type="email" placeholder="Email address" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} className="h-10 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-slate-500" />
-              <div>
-                <p className="mb-1 text-xs font-medium text-slate-500">Invite as</p>
-                <div className="flex gap-1">
-                  <button type="button" onClick={() => setInviteForm({ ...inviteForm, role: "user" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${inviteForm.role === "user" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>
-                    Member
-                  </button>
-                  <button type="button" onClick={() => setInviteForm({ ...inviteForm, role: "admin" })} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${inviteForm.role === "admin" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-500 hover:text-slate-700"}`}>
-                    Admin
-                  </button>
-                </div>
-              </div>
-              <textarea placeholder="Personal message (optional)" rows={2} value={inviteForm.message} onChange={(e) => setInviteForm({ ...inviteForm, message: e.target.value })} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500" />
-              <button onClick={handleSendInvite} disabled={inviteSending} className="w-fit rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
-                {inviteSending ? "Sending..." : "Send invite"}
-              </button>
-            </div>
-          </div>
-
-          {/* Sent invites list */}
-          <div className="grid gap-3">
-            <h2 className="text-sm font-semibold text-slate-900">Sent invites</h2>
-            {invites.length === 0 ? <p className="text-sm text-slate-500">No invites sent yet.</p> : invites.map((invite) => (
-              <div key={invite.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-slate-800">{invite.email}</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${invite.role === "admin" ? "bg-purple-50 text-purple-700" : "bg-slate-100 text-slate-600"}`}>{invite.role === "admin" ? "Admin" : "Member"}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${invite.status === "pending" ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>{invite.status}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-400">{invite.invitedByName} — {new Date(invite.createdAt).toLocaleDateString()}</span>
-                  <button onClick={() => handleResendInvite(invite.id)} disabled={actionLoading === invite.id} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60">{actionLoading === invite.id ? "..." : "Resend"}</button>
-                  <button onClick={() => handleCancelInvite(invite.id)} disabled={actionLoading === invite.id} className="text-xs font-semibold text-red-500 hover:text-red-700 disabled:opacity-60">Cancel</button>
                 </div>
               </div>
             ))}

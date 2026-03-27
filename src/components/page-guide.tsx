@@ -85,11 +85,12 @@ const PAGE_GUIDES: Record<string, { headline: string; summary: string; details: 
   },
   admin_users: {
     headline: "Manage your community",
-    summary: "View every registered member, change roles, and monitor verification and approval status at a glance.",
+    summary: "View all members and pending invites, change roles, invite new people, and monitor verification and approval status.",
     details: [
+      "Use the \"Invite someone\" button to send email invitations. Invited users appear in the table with an \"Invited\" badge until they register. You can resend or cancel invites from the table.",
       "Roles control what a user can do: regular users can create events and RSVP, admins can approve members and events, and super admins have full access including role management.",
-      "Status badges show whether a member has verified their email and whether an admin has approved their account — both are required before they can access protected content.",
-      "You can promote trusted members to admin so they can help manage the group, or demote if needed. You cannot change your own role.",
+      "Status badges show whether a member has verified their email, been approved, or is still an invited prospect. Filter by status to quickly find who needs attention.",
+      "You can promote trusted members to admin, deactivate members who leave, or reactivate former members. You cannot change your own role.",
     ],
   },
   admin_announcements: {
