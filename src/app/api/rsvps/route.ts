@@ -97,6 +97,18 @@ export async function POST(request: Request) {
               }),
             }).catch(() => {});
           }
+
+          // In-app notification for promoted user
+          if (event) {
+            const { createNotification } = await import("@/lib/notify");
+            await createNotification(db, {
+              userId: promoted.userId,
+              type: "waitlist_promoted",
+              message: `A spot opened up for "${event.title}" — you're now going!`,
+              linkUrl: `/events/${eventId.toString()}`,
+              eventId,
+            });
+          }
         }
       }
     }
@@ -195,6 +207,22 @@ export async function POST(request: Request) {
             { upsert: true }
           );
         }
+      }
+    }
+
+    // Notify event creator when someone RSVPs "going"
+    if (parsed.data.status === "going") {
+      const rsvpEvent = await db.collection("events").findOne({ _id: eventId });
+      if (rsvpEvent?.creatorId && rsvpEvent.creatorId.toString() !== user._id.toString()) {
+        const rsvpUserName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Someone";
+        const { createNotification } = await import("@/lib/notify");
+        await createNotification(db, {
+          userId: rsvpEvent.creatorId,
+          type: "event_rsvp",
+          message: `${rsvpUserName} RSVP'd going to "${rsvpEvent.title}"`,
+          linkUrl: `/events/${eventId.toString()}`,
+          eventId,
+        });
       }
     }
 

@@ -24,6 +24,8 @@ export async function POST(
     const rejectionReason = typeof body?.reason === "string" ? body.reason : undefined;
 
     const db = await getDb();
+    const event = await db.collection("events").findOne({ _id: new ObjectId(id) });
+
     await db.collection("events").updateOne(
       { _id: new ObjectId(id) },
       {
@@ -34,6 +36,18 @@ export async function POST(
         },
       }
     );
+
+    // Notify event creator
+    if (event?.creatorId) {
+      const { createNotification } = await import("@/lib/notify");
+      await createNotification(db, {
+        userId: event.creatorId,
+        type: "event_rejected",
+        message: `Your event "${event.title}" was sent back for revision${rejectionReason ? `: "${rejectionReason}"` : "."}`,
+        linkUrl: `/events/${id}`,
+        eventId: id,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch {

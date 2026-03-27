@@ -58,11 +58,12 @@ const PAGE_GUIDES: Record<string, { headline: string; summary: string; details: 
   },
   notifications: {
     headline: "Stay in the loop",
-    summary: "See alerts for event updates, approval status changes, and community activity that involves you.",
+    summary: "Your inbox for event approvals, RSVPs, comments, announcements, and more. Customize exactly which notifications you receive.",
     details: [
-      "Notifications let you know when events you've RSVP'd to are updated, when your event submissions are approved or rejected, and when admin actions affect your account.",
-      "You can configure your notification preferences to control what you receive email alerts for versus in-app only.",
-      "Mark notifications as read individually or clear them all at once to keep things tidy.",
+      "Your inbox shows notifications when your events are approved or rejected, when someone RSVPs to your event, when people comment on your events, when you're promoted off a waitlist, and when new announcements are posted.",
+      "Click any notification to jump to the relevant page. Unread notifications are highlighted with a blue dot and the count shows in the nav bar.",
+      "In Preferences, toggle individual notification types on or off — for example, turn off RSVP notifications if you don't want to be pinged for every signup, but keep comment notifications on.",
+      "Email reminders are separate — they send you an email before events you've RSVP'd to, with configurable timing (1 day, 1 week, etc.).",
     ],
   },
   profile: {

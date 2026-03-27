@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/lib/client";
 
 const publicNavItems = [
@@ -22,6 +22,16 @@ export function SiteHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/notifications?limit=1")
+      .then((r) => (r.ok ? r.json() : { unreadCount: 0 }))
+      .then((d) => setUnreadCount(d?.unreadCount ?? 0))
+      .catch(() => {});
+  }, [user, pathname]);
 
   const navItems = [
     ...publicNavItems,
@@ -54,9 +64,14 @@ export function SiteHeader() {
                 key={item.href}
                 href={item.href}
                 data-active={isActive}
-                className={`rounded-full px-3 py-1.5 transition ${isActive ? "bg-slate-900 text-white" : "hover:bg-slate-100 hover:text-slate-900"}`}
+                className={`relative rounded-full px-3 py-1.5 transition ${isActive ? "bg-slate-900 text-white" : "hover:bg-slate-100 hover:text-slate-900"}`}
               >
                 {item.label}
+                {item.label === "Notifications" && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}

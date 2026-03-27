@@ -36,20 +36,36 @@ export async function POST(request: Request) {
 
     const result = await db.collection("comments").insertOne(comment);
 
+    const { createNotification } = await import("@/lib/notify");
+    const event = await db.collection("events").findOne({ _id: comment.eventId });
+    const commenterName = comment.userName || "Someone";
+
     // Notify parent comment author if this is a reply
     if (parsed.data.parentCommentId) {
       const parentComment = await db.collection("comments").findOne({
         _id: new ObjectId(parsed.data.parentCommentId),
       });
       if (parentComment && parentComment.userId.toString() !== user._id.toString()) {
-        const event = await db.collection("events").findOne({ _id: comment.eventId });
-        await db.collection("notifications").insertOne({
+        await createNotification(db, {
           userId: parentComment.userId,
           type: "comment_reply",
-          message: `${comment.userName || "Someone"} replied to your comment on "${event?.title ?? "an event"}"`,
+          message: `${commenterName} replied to your comment on "${event?.title ?? "an event"}"`,
+          linkUrl: `/events/${comment.eventId.toString()}`,
           eventId: comment.eventId,
-          read: false,
-          createdAt: now,
+        });
+      }
+    }
+
+    // Notify event creator about new comments (unless they wrote it or it's a reply to them already notified)
+    if (event?.creatorId && event.creatorId.toString() !== user._id.toString()) {
+      const alreadyNotifiedAsReply = parsed.data.parentCommentId && (await db.collection("comments").findOne({ _id: new ObjectId(parsed.data.parentCommentId) }))?.userId.toString() === event.creatorId.toString();
+      if (!alreadyNotifiedAsReply) {
+        await createNotification(db, {
+          userId: event.creatorId,
+          type: "event_comment",
+          message: `${commenterName} commented on your event "${event.title}"`,
+          linkUrl: `/events/${comment.eventId.toString()}`,
+          eventId: comment.eventId,
         });
       }
     }

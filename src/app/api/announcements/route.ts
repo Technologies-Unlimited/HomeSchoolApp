@@ -94,6 +94,23 @@ export async function POST(request: Request) {
 
     const result = await db.collection("announcements").insertOne(announcement);
 
+    // In-app notification for all approved members (except the author)
+    if (!publishAt) {
+      const { createNotificationForMany } = await import("@/lib/notify");
+      const approvedMembers = await db.collection("users")
+        .find({ approved: true, isActive: { $ne: false }, _id: { $ne: new ObjectId(user._id) } }, { projection: { _id: 1 } })
+        .toArray();
+      await createNotificationForMany(
+        db,
+        approvedMembers.map((m) => m._id),
+        {
+          type: "announcement",
+          message: `New announcement: "${title.trim()}"`,
+          linkUrl: "/",
+        }
+      );
+    }
+
     // Audit log
     const { logAudit } = await import("@/lib/audit");
     await logAudit(db, {

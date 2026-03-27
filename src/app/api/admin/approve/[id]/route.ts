@@ -6,6 +6,7 @@ import { isAdmin } from "@/lib/roles";
 import { isValidObjectId } from "@/lib/objectid";
 import { sendNotificationEmail } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
+import { createNotification } from "@/lib/notify";
 
 // POST: Approve a user
 export async function POST(
@@ -48,6 +49,14 @@ export async function POST(
       targetId: id,
       details: `Approved ${targetName}`,
       previousState: { approved: false },
+    });
+
+    // In-app notification
+    await createNotification(db, {
+      userId: id,
+      type: "account_approved",
+      message: "Your account has been approved! You now have full access to the community.",
+      linkUrl: "/events",
     });
 
     // Send approval email to the user

@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/session";
 import { isAdmin } from "@/lib/roles";
 import { logAudit } from "@/lib/audit";
+import { createNotification } from "@/lib/notify";
 
 export async function POST(
   request: Request,
@@ -46,6 +47,17 @@ export async function POST(
       details: `Approved event "${event?.title ?? id}"`,
       previousState: { status: event?.status },
     });
+
+    // Notify event creator
+    if (event?.creatorId) {
+      await createNotification(db, {
+        userId: event.creatorId,
+        type: "event_approved",
+        message: `Your event "${event.title}" has been approved and is now live!`,
+        linkUrl: `/events/${id}`,
+        eventId: id,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch {
