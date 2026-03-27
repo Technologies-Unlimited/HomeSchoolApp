@@ -129,8 +129,8 @@ export async function POST(request: Request) {
           </div>
         `,
       });
-    } catch (emailError) {
-      console.error("[REGISTER] Failed to send verification email:", emailError);
+    } catch {
+      // Email failed but account was created — user can resend from pending-approval page
     }
 
     // Notify admins

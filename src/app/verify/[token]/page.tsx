@@ -2,11 +2,15 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useCurrentUser } from "@/lib/client";
 
 export default function VerifyPage({ params: paramsPromise }: { params: Promise<{ token: string }> }) {
   const params = use(paramsPromise);
+  const { user, refresh } = useCurrentUser();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/verify", {
@@ -19,6 +23,7 @@ export default function VerifyPage({ params: paramsPromise }: { params: Promise<
         if (data.success) {
           setStatus("success");
           setMessage("Your email has been verified! An admin will review your account shortly.");
+          refresh();
         } else {
           setStatus("error");
           setMessage(data.error || "Verification failed.");
@@ -28,7 +33,17 @@ export default function VerifyPage({ params: paramsPromise }: { params: Promise<
         setStatus("error");
         setMessage("Something went wrong. Please try again.");
       });
-  }, [params.token]);
+  }, [params.token, refresh]);
+
+  async function handleResend() {
+    setResending(true);
+    const r = await fetch("/api/auth/resend-verification", { method: "POST" });
+    setResending(false);
+    if (r.ok) {
+      setResendSuccess(true);
+      setMessage("A new verification email has been sent. Check your inbox.");
+    }
+  }
 
   return (
     <section className="mx-auto flex w-full max-w-lg flex-col items-center gap-6 py-20 text-center">
@@ -36,7 +51,7 @@ export default function VerifyPage({ params: paramsPromise }: { params: Promise<
       {status === "success" && (
         <>
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 text-2xl text-green-600">
-            ✓
+            &#10003;
           </div>
           <h1 className="text-2xl font-semibold text-slate-900">Email verified</h1>
           <p className="text-sm text-slate-600">{message}</p>
@@ -52,9 +67,20 @@ export default function VerifyPage({ params: paramsPromise }: { params: Promise<
           </div>
           <h1 className="text-2xl font-semibold text-slate-900">Verification failed</h1>
           <p className="text-sm text-slate-600">{message}</p>
-          <Link href="/" className="rounded-full border border-slate-300 px-6 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-            Go home
-          </Link>
+          <div className="flex gap-3">
+            {user && !resendSuccess && (
+              <button
+                onClick={handleResend}
+                disabled={resending}
+                className="rounded-full bg-slate-900 px-6 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+              >
+                {resending ? "Sending..." : "Resend verification email"}
+              </button>
+            )}
+            <Link href="/login" className="rounded-full border border-slate-300 px-6 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+              {user ? "Go home" : "Sign in to resend"}
+            </Link>
+          </div>
         </>
       )}
     </section>
