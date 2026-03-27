@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { sendNotificationEmail } from "./notifications";
 import { ObjectId } from "mongodb";
+import { brandedEmail, infoCard } from "./email-template";
 
 export async function notifyAttendeesOfEventChange(
   eventId: ObjectId,
@@ -28,28 +29,31 @@ export async function notifyAttendeesOfEventChange(
       ? `Event cancelled: ${eventTitle}`
       : `Event updated: ${eventTitle}`;
 
-  const headline =
-    changeType === "cancelled"
-      ? "An event you RSVP'd to has been cancelled"
-      : "An event you RSVP'd to has been updated";
+  const icon = changeType === "cancelled" ? "&#10060;" : "&#128221;";
+  const headline = changeType === "cancelled" ? "Event Cancelled" : "Event Updated";
 
   const detailBlock = changeDetails
-    ? `<p style="margin:16px 0;padding:12px 16px;background:#f8fafc;border-radius:8px;font-size:14px;color:#475569;">${changeDetails}</p>`
+    ? infoCard(`<p style="margin:0;font-size:14px;color:#475569;">${changeDetails}</p>`)
     : "";
 
-  const html = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;">
-      <h2 style="font-size:20px;font-weight:600;margin-bottom:8px;">${headline}</h2>
-      <p style="margin:0 0 16px;padding:10px 16px;background:${changeType === "cancelled" ? "#fef2f2" : "#eff6ff"};border-radius:8px;font-size:15px;font-weight:600;color:${changeType === "cancelled" ? "#991b1b" : "#1e40af"};">${eventTitle}</p>
+  const html = brandedEmail({
+    icon,
+    headline,
+    subtitle: eventTitle,
+    body: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1e293b;">
+        ${changeType === "cancelled"
+          ? `The event <strong>${eventTitle}</strong> that you RSVP'd to has been <span style="color:#dc2626;font-weight:600;">cancelled</span>.`
+          : `The event <strong>${eventTitle}</strong> that you RSVP'd to has been updated with new details.`
+        }
+      </p>
       ${detailBlock}
-      <p style="font-size:12px;color:#94a3b8;margin-top:24px;">You received this email because you RSVP'd to this event.</p>
-    </div>
-  `;
+    `,
+    footerText: "You received this email because you RSVP'd to this event.",
+  });
 
   const sendPromises = users.map((u) =>
-    sendNotificationEmail({ to: u.email, subject, html }).catch((err) =>
-      console.error(`[EVENT-EMAIL] Failed to send to ${u.email}:`, err)
-    )
+    sendNotificationEmail({ to: u.email, subject, html }).catch(() => {})
   );
 
   await Promise.allSettled(sendPromises);

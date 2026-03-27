@@ -84,10 +84,17 @@ export async function POST(request: Request) {
           const event = await db.collection("events").findOne({ _id: eventId });
           if (promotedUser?.email && event) {
             const { sendNotificationEmail } = await import("@/lib/notifications");
+            const { brandedEmail } = await import("@/lib/email-template");
             sendNotificationEmail({
               to: promotedUser.email,
               subject: `A spot opened up: ${event.title}`,
-              html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;"><h2 style="font-size:20px;font-weight:600;">You're off the waitlist!</h2><p style="font-size:14px;color:#475569;">A spot opened up for <strong>${event.title}</strong> and you've been automatically moved from the waitlist to going. See you there!</p></div>`,
+              html: brandedEmail({
+                icon: "&#127881;",
+                headline: "You're Off the Waitlist!",
+                subtitle: event.title,
+                body: `<p style="margin:0;font-size:15px;line-height:1.6;color:#1e293b;">Great news — a spot opened up for <strong>${event.title}</strong> and you've been automatically moved from the waitlist to <span style="color:#16a34a;font-weight:600;">going</span>. See you there!</p>`,
+                footerText: "You received this because you were on the waitlist for this event.",
+              }),
             }).catch(() => {});
           }
         }

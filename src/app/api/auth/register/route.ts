@@ -129,23 +129,28 @@ export async function POST(request: Request) {
 
     // Notify admins
     try {
+      const { brandedEmail, infoCard, ctaButton } = await import("@/lib/email-template");
       const admins = await db.collection("users").find({ role: { $in: ["admin", "super_admin"] } }, { projection: { email: 1 } }).toArray();
+      const adminHtml = brandedEmail({
+        icon: "&#128075;",
+        headline: "New Member Signup",
+        subtitle: `${firstName} ${lastName} wants to join`,
+        body: `
+          ${infoCard(`
+            <p style="margin:0 0 6px;font-size:14px;color:#1e293b;font-weight:600;">${firstName} ${lastName}</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#475569;">${email}</p>
+            <p style="margin:0;font-size:13px;color:#475569;">Child: ${childFirstName} ${childLastName}</p>
+          `)}
+          <p style="margin:16px 0 0;font-size:14px;color:#475569;">They need to verify their email first, then you can approve them from the admin dashboard.</p>
+          ${ctaButton(`${getBaseUrl()}/admin`, "Open Admin Dashboard")}
+        `,
+        footerText: "You received this because you are an admin of Home School Group.",
+      });
       for (const admin of admins) {
-        await sendNotificationEmail({
-          to: admin.email,
-          subject: `New member signup — ${firstName} ${lastName}`,
-          html: `
-            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
-              <h2 style="margin:0 0 16px;color:#0f172a;font-size:20px;">New Member Signup</h2>
-              <p style="margin:0 0 8px;color:#475569;font-size:14px;"><strong>${firstName} ${lastName}</strong> (${email}) has signed up.</p>
-              <p style="margin:0 0 8px;color:#475569;font-size:14px;">Child: <strong>${childFirstName} ${childLastName}</strong></p>
-              <p style="margin:0 0 24px;color:#475569;font-size:14px;">They need to verify their email first, then you can approve them from the admin dashboard.</p>
-            </div>
-          `,
-        });
+        await sendNotificationEmail({ to: admin.email, subject: `New member signup — ${firstName} ${lastName}`, html: adminHtml });
       }
-    } catch (adminEmailError) {
-      console.error("[REGISTER] Failed to notify admins:", adminEmailError);
+    } catch {
+      // Admin notification failed — non-critical
     }
 
     // Sign in the user (limited access until verified + approved)

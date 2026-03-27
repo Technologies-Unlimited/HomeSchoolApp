@@ -42,28 +42,27 @@ async function processQueue() {
         continue;
       }
 
+      const { brandedEmail, infoCard, detailRow } = await import("@/lib/email-template");
       const eventDate = new Date(event.startDate).toLocaleString();
-      const locationText = event.location?.name
-        ? `<p style="margin:0 0 8px;color:#64748b;font-size:14px;">Location: ${event.location.name}${event.location.address ? ` — ${event.location.address}` : ""}</p>`
-        : "";
 
       await sendNotificationEmail({
         to: user.email,
         subject: `Reminder: ${event.title} — ${eventDate}`,
-        html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
-            <h2 style="margin:0 0 16px;color:#0f172a;font-size:20px;">Upcoming Event Reminder</h2>
-            <div style="padding:20px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-              <h3 style="margin:0 0 8px;color:#0f172a;font-size:18px;">${event.title}</h3>
-              <p style="margin:0 0 8px;color:#64748b;font-size:14px;">When: ${eventDate}</p>
-              ${locationText}
-              ${event.description ? `<p style="margin:12px 0 0;color:#475569;font-size:14px;">${event.description}</p>` : ""}
-            </div>
-            <p style="margin:24px 0 0;color:#94a3b8;font-size:12px;">
-              You're receiving this because you RSVP'd to this event on Home School Group.
-            </p>
-          </div>
-        `,
+        html: brandedEmail({
+          icon: "&#128276;",
+          headline: "Event Reminder",
+          subtitle: event.title,
+          body: `
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1e293b;">You have an upcoming event you RSVP'd to:</p>
+            ${infoCard(`
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f172a;">${event.title}</p>
+              ${detailRow("When", eventDate)}
+              ${event.location?.name ? detailRow("Where", `${event.location.name}${event.location.address ? ` — ${event.location.address}` : ""}`) : ""}
+              ${event.description ? `<p style="margin:8px 0 0;font-size:13px;color:#64748b;">${event.description}</p>` : ""}
+            `)}
+          `,
+          footerText: "You received this because you RSVP'd to this event on Home School Group.",
+        }),
       });
 
       await db.collection("notificationQueue").updateOne(

@@ -52,16 +52,37 @@ export async function POST(
 
     // Send approval email to the user
     try {
+      const { brandedEmail, ctaButton } = await import("@/lib/email-template");
+      const { getBaseUrl } = await import("@/lib/base-url");
       await sendNotificationEmail({
         to: targetUser.email,
         subject: "You've been approved — Home School Group",
-        html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
-            <h2 style="margin:0 0 16px;color:#0f172a;font-size:20px;">Welcome to the group!</h2>
-            <p style="margin:0 0 24px;color:#475569;font-size:14px;">Hi ${targetUser.firstName}, your account has been approved. You now have full access to events, the family directory, and all community features.</p>
-            <p style="margin:0;color:#94a3b8;font-size:12px;">Log in at your convenience to get started.</p>
-          </div>
-        `,
+        html: brandedEmail({
+          icon: "&#127881;",
+          headline: "You're In!",
+          subtitle: "Your account has been approved",
+          body: `
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1e293b;">Hi <strong>${targetUser.firstName}</strong>, great news — an admin has approved your account. You now have full access to everything:</p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:0 0 16px;">
+              <tr>
+                <td style="width:33.33%;padding:16px 8px;text-align:center;border-right:1px solid #e2e8f0;">
+                  <p style="margin:0 0 4px;font-size:20px;">&#128197;</p>
+                  <p style="margin:0;font-size:11px;font-weight:600;color:#1e293b;">Events & RSVPs</p>
+                </td>
+                <td style="width:33.33%;padding:16px 8px;text-align:center;border-right:1px solid #e2e8f0;">
+                  <p style="margin:0 0 4px;font-size:20px;">&#128106;</p>
+                  <p style="margin:0;font-size:11px;font-weight:600;color:#1e293b;">Family Directory</p>
+                </td>
+                <td style="width:33.33%;padding:16px 8px;text-align:center;">
+                  <p style="margin:0 0 4px;font-size:20px;">&#128276;</p>
+                  <p style="margin:0;font-size:11px;font-weight:600;color:#1e293b;">Announcements</p>
+                </td>
+              </tr>
+            </table>
+            ${ctaButton(`${getBaseUrl()}/events`, "Explore Events")}
+          `,
+          footerText: "Welcome to the Home School Group community!",
+        }),
       });
     } catch (emailError) {
       console.error("[APPROVE] Failed to send approval email:", emailError);
